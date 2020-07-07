@@ -48,7 +48,7 @@ type User struct {
 
 // PlatformUser 平台返回的用户数据
 type PlatformUser struct {
-	ID        int64  `json:"id"`
+	PID       int64  `json:"id"`
 	Login     string `json:"login"`
 	Name      string `json:"name"`
 	Email     string `json:"email"`

@@ -3,9 +3,26 @@ environments:
   project_name: CoolPush
   # 服务地址端口配置
   server: :443
-  # github授权
-  client_id: cc74ff2d2f067e5671f1
-  client_secret: 456bcfbbdd1c3195521ec9ac686920bc4743eb9e
+  https:
+    # 是否开启 https 默认开启 http
+    enable: true
+    # 证书地址
+    cert_file: cert.crt
+    # 私钥地址
+    key_file: key.key
+  # oauth授权
+  oauth:
+    github:
+      client_id: cc74ff2d2f067e5671f1
+      client_secret: 456bcfbbdd1c3195521ec9ac686920bc4743eb9e
+    gitee:
+      client_id: 6c40ca5143961574faba6b8b9e49b5b6ecc9345ce8cc82eaa2b2d2a30b5f3c70
+      client_secret: bbfa2ef7648999dc66cd687228d57e8454c3f993b96988d488c5ef4e6af7f1e7
+      callback: https://cp.xuthus.cc
+    osc:
+      client_id: VVAVHVNBpANuC6PFuZhn
+      client_secret: Hn6nhjEceUijsxmzEWypiQlP2nE9cN5Z
+      callback: https://cp.xuthus.cc
   # jwt 配置项
   jwt:
     skey: SWtPI3RNJmUjQWFaVXVYUg
@@ -13,10 +30,12 @@ environments:
     subject: cool_push_auth_login
     expires: 86400
   # mysql连接
-  mysql: root:root@tcp(127.0.0.1:3306)/qtqq?charset=utf8mb4&collation=utf8mb4_general_ci&parseTime=True&loc=Local
+  mysql: root:root@tcp(127.0.0.1:3306)/coolpush?charset=utf8mb4&collation=utf8mb4_general_ci&parseTime=True&loc=Local
   # 发起send的地址 不需要端口
   cqhttp: http://127.0.0.1
   # 机器人列表 QQ:PORT
   robots:
     964627404: :5700
     723860385: :5701
+    228346469: :5702
+    1498598914: :5703

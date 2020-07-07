@@ -14,14 +14,41 @@ type E struct {
 
 // Environments 项目主要配置项[子项] 如果需要扩展 在这里添加结构来实现yaml的解析
 type Environments struct {
-	ProjectName  string            `yaml:"project_name"`  //项目名称
-	Server       string            `yaml:"server"`        //服务运行的host:port
-	ClientID     string            `yaml:"client_id"`     //github应用授权ID
-	ClientSecret string            `yaml:"client_secret"` //授权私钥
-	Jwt          JWT               `yaml:"jwt"`           //token配置
-	Mysql        string            `yaml:"mysql"`         //mysql数据库配置
-	CQHttp       string            `yaml:"cqhttp"`        //cqhttp服务地址
-	Robots       map[string]string `yaml:"robots"`        //机器人列表
+	ProjectName string            `yaml:"project_name"` //项目名称
+	Server      string            `yaml:"server"`       //服务运行的 :port
+	HTTPS       HTTPS             `yaml:"https"`        //https配置项
+	Oauth       Oauth             `yaml:"oauth"`        //第三方授权
+	Jwt         JWT               `yaml:"jwt"`          //token配置
+	Mysql       string            `yaml:"mysql"`        //mysql数据库配置
+	CQHttp      string            `yaml:"cqhttp"`       //cqhttp服务地址
+	Robots      map[string]string `yaml:"robots"`       //机器人列表
+}
+
+// HTTPS 配置
+type HTTPS struct {
+	Enable   bool   `yaml:"enable"`    //是否开启https
+	CertFile string `yaml:"cert_file"` //ssl证书
+	KeyFile  string `yaml:"key_file"`  //证书密钥
+}
+
+// OAuth 第三方授权
+type Oauth struct {
+	Github struct {
+		ClientID     string `yaml:"client_id"`
+		ClientSecret string `yaml:"client_secret"`
+	} `yaml:"github"`
+
+	Gitee struct {
+		ClientID     string `yaml:"client_id"`
+		ClientSecret string `yaml:"client_secret"`
+		Callback     string `yaml:"callback"`
+	} `yaml:"gitee"`
+
+	Osc struct {
+		ClientID     string `yaml:"client_id"`
+		ClientSecret string `yaml:"client_secret"`
+		Callback     string `yaml:"callback"`
+	} `yaml:"osc"`
 }
 
 // JWT json-web-token
