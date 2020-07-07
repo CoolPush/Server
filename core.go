@@ -27,7 +27,7 @@ func NewUserByPid(id int64, method string) error {
 	h := sha256.New()
 	h.Write([]byte(uuid.Must(uuid.NewRandom()).String()))
 	key := hex.EncodeToString(h.Sum(nil))[:32]
-	var u = &Users{
+	var u = &User{
 		Pid:       id,
 		LoginType: method,
 		Skey:      key,
@@ -43,7 +43,7 @@ func NewUserByOid(id string, method string) error {
 	h := sha256.New()
 	h.Write([]byte(uuid.Must(uuid.NewRandom()).String()))
 	key := hex.EncodeToString(h.Sum(nil))[:32]
-	var u = &Users{
+	var u = &User{
 		Oid:       id,
 		LoginType: method,
 		Skey:      key,
@@ -108,8 +108,8 @@ func CheckToken(tokenString string) (int64, error) {
 }
 
 // SearchByKey 通过key查询用户是否存在
-func SearchByKey(key string) (*Users, bool, error) {
-	var u = &Users{}
+func SearchByKey(key string) (*User, bool, error) {
+	var u = &User{}
 	exist, err := engine.Where("skey = ?", key).Get(u)
 	return u, exist, err
 }
@@ -196,7 +196,7 @@ func ResetSkey(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		h := sha256.New()
 		h.Write([]byte(uuid.Must(uuid.NewRandom()).String()))
 		key := hex.EncodeToString(h.Sum(nil))[:32]
-		var u = &Users{
+		var u = &User{
 			Id:   id,
 			Skey: key,
 		}
@@ -903,7 +903,7 @@ func Bind(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	}
 	to := r.URL.Query().Get("sendTo")
 	from := r.URL.Query().Get("sendFrom")
-	var user = &Users{
+	var user = &User{
 		Id:       id,
 		SendTo:   to,
 		SendFrom: from,
@@ -963,7 +963,7 @@ func GroupBind(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	}
 	to := r.URL.Query().Get("groupTo")
 	from := r.URL.Query().Get("groupFrom")
-	var user = &Users{
+	var user = &User{
 		Id:        id,
 		GroupTo:   to,
 		GroupFrom: from,
