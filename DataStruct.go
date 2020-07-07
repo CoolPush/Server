@@ -42,7 +42,7 @@ type User struct {
 	GroupTo   string `json:"groupTo" xorm:"varchar(10) default('')"`                       //用户群
 	GroupFrom string `json:"groupFrom" xorm:"varchar(10) default('')"`                     //群推送QQ机器人
 	CreateAt  string `json:"createTime" xorm:"varchar(19) default('2020-06-01 00:00:00')"` //注册时间
-	LoginType string `json:"loginType" xorm:"default('github')"`                           //授权登陆方式
+	LoginType string `json:"loginType" xorm:"varchar(16) default('github')"`               //授权登陆方式
 	Status    bool   `json:"status" xorm:"default(true)"`                                  //账户状态
 }
 

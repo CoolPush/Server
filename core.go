@@ -583,8 +583,8 @@ func AuthGithub(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		//登录成功 拿到gu信息
 		idRaw := response.Data.(map[string]interface{})["id"].(json.Number)
 		id, _ := idRaw.Int64()
-		//判断 是否存在 id 存在则不变 不存在则创建用户
-		u, exist, err := SearchByID(id)
+		//判断 是否存在 pid 存在则不变 不存在则创建用户
+		u, exist, err := SearchByPID(id,"github")
 		if !exist {
 			//没找到 注册用户
 			err = NewUserByPid(id, "github")
@@ -597,7 +597,7 @@ func AuthGithub(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 				Write(w, ret)
 				return
 			}
-			u, _, _ = SearchByID(id)
+			u, _, _ = SearchByPID(id,"github")
 		}
 		//TODO 找到了 检测用户状态
 		if u != nil && (!u.Status || u.Fouls >= FoulsNumber) {
