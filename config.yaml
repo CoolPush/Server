@@ -13,7 +13,7 @@ environments:
     subject: cool_push_auth_login
     expires: 86400
   # mysql连接
-  mysql: root:root@tcp(127.0.0.1:3306)/coolpush?charset=utf8mb4&collation=utf8mb4_general_ci&parseTime=True&loc=Local
+  mysql: root:root@tcp(127.0.0.1:3306)/qtqq?charset=utf8mb4&collation=utf8mb4_general_ci&parseTime=True&loc=Local
   # 发起send的地址 不需要端口
   cqhttp: http://127.0.0.1
   # 机器人列表 QQ:PORT

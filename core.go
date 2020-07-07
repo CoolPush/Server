@@ -159,22 +159,29 @@ func Ping(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 
 // Migrate 联通性检测
 func Migrate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	type old struct {
-		Gid       int64  `json:"gid" xorm:"pk autoincr"`                                       //id 数据库的记录id
-		Count     int64  `json:"count" xorm:"default(0)"`                                      //用户使用统计
-		Fouls     int64  `json:"fouls" xorm:"default(0)"`                                      //违规次数
-		LastSend  int64  `json:"lastSend" xorm:"default(0)"`                                   //上次发送时间
-		Skey      string `json:"skey" xorm:"varchar(32) notnull unique"`                       //发送关键钥  send_key
-		SendTo    string `json:"sendTo" xorm:"varchar(10) default('')"`                        //用户QQ
-		SendFrom  string `json:"sendFrom" xorm:"varchar(10) default('')"`                      //发送QQ
-		GroupTo   string `json:"groupTo" xorm:"varchar(10) default('')"`                       //用户群
-		GroupFrom string `json:"groupFrom" xorm:"varchar(10) default('')"`                     //群推送QQ机器人
-		CreateAt  string `json:"createTime" xorm:"varchar(19) default('2020-06-01 00:00:00')"` //注册时间
-		Status    bool   `json:"status" xorm:"default(true)"`                                  //账户状态
-	}
-
-	var table = make([]old, 0)
+	var table = make([]OldUser, 0)
 	engine.Find(&table)
+	var u = new(User)
+	for _, v := range table {
+		u = &User{
+			Pid:       v.Gid,
+			Count:     v.Count,
+			Fouls:     v.Fouls,
+			LastSend:  v.LastSend,
+			Oid:       "",
+			Skey:      v.Skey,
+			SendTo:    v.SendTo,
+			SendFrom:  v.SendFrom,
+			GroupTo:   v.GroupTo,
+			GroupFrom: v.GroupFrom,
+			CreateAt:  v.CreateAt,
+			LoginType: "github",
+			Status:    true,
+		}
+		if _, err := engine.Insert(u); err != nil {
+			fmt.Println(v.Pid, err)
+		}
+	}
 
 }
 

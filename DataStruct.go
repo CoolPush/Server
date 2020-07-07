@@ -13,6 +13,21 @@ const (
 	StatusServerForbid       = 503   //服务端禁止了操作
 )
 
+// OldUser 老表
+type OldUser struct {
+	Gid       int64  `json:"gid" xorm:"pk autoincr"`                                       //id 数据库的记录id
+	Count     int64  `json:"count" xorm:"default(0)"`                                      //用户使用统计
+	Fouls     int64  `json:"fouls" xorm:"default(0)"`                                      //违规次数
+	LastSend  int64  `json:"lastSend" xorm:"default(0)"`                                   //上次发送时间
+	Skey      string `json:"skey" xorm:"varchar(32) notnull unique"`                       //发送关键钥  send_key
+	SendTo    string `json:"sendTo" xorm:"varchar(10) default('')"`                        //用户QQ
+	SendFrom  string `json:"sendFrom" xorm:"varchar(10) default('')"`                      //发送QQ
+	GroupTo   string `json:"groupTo" xorm:"varchar(10) default('')"`                       //用户群
+	GroupFrom string `json:"groupFrom" xorm:"varchar(10) default('')"`                     //群推送QQ机器人
+	CreateAt  string `json:"createTime" xorm:"varchar(19) default('2020-06-01 00:00:00')"` //注册时间
+	Status    bool   `json:"status" xorm:"default(true)"`                                  //账户状态
+}
+
 // User 用户表结构
 type User struct {
 	Id        int64  `json:"id" xorm:"pk autoincr"`                                        //id 数据库的记录id
