@@ -1,9 +1,10 @@
 package main
 
 import (
-	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"sync"
+
+	"gopkg.in/yaml.v2"
 )
 
 // E 定义了读取配置文件信息的根结构
@@ -32,12 +33,15 @@ type JWT struct {
 }
 
 // conf 是一个全局的配置信息实例 项目运行只读取一次 是一个单例
-var conf *E
-var config_once sync.Once
+// configOnce 保持了单例
+var (
+	conf       *E
+	configOnce sync.Once
+)
 
 // GetConfig 调用该方法会实例化conf 项目运行会读取一次配置文件 确保不会有多余的读取损耗
 func GetConfig() *E {
-	config_once.Do(func() {
+	configOnce.Do(func() {
 		conf = new(E)
 		yamlFile, err := ioutil.ReadFile("config.yaml")
 		if err != nil {

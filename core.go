@@ -7,9 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-
-	//"fmt"
-	"github.com/julienschmidt/httprouter"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -17,6 +14,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/julienschmidt/httprouter"
 
 	"github.com/google/uuid"
 
@@ -42,7 +41,7 @@ func NewUser(id int64, method string) error {
 // DistributeToken 分发token
 func DistributeToken(id int64) (string, error) {
 	claims := CustomClaims{
-		Id: id,
+		ID: id,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: time.Now().Unix() + conf.Jwt.Expires,
 			NotBefore: time.Now().Unix(),
@@ -72,10 +71,10 @@ func CheckToken(tokenString string) (int64, error) {
 	if token.Valid {
 		if c, ok := token.Claims.(*CustomClaims); ok {
 			//检测
-			if _, exist, _ := SearchById(c.Id); !exist {
+			if _, exist, _ := SearchByID(c.ID); !exist {
 				return 0, errors.New("用户与token不匹配")
 			}
-			return c.Id, nil
+			return c.ID, nil
 		}
 	}
 
@@ -98,10 +97,17 @@ func SearchByKey(key string) (*User, error) {
 	return u, err
 }
 
-// SearchById 通过id查询用户是否存在
-func SearchById(id int64) (*User, bool, error) {
+// SearchByID 通过id查询用户是否存在
+func SearchByID(id int64) (*User, bool, error) {
 	var u = &User{}
 	exist, err := engine.ID(id).Get(u)
+	return u, exist, err
+}
+
+// SearchByOID 通过oid查询用户是否存在
+func SearchByOID(oid string) (*User, bool, error) {
+	var u = &User{}
+	exist, err := engine.Where("oid = ?", oid).Get(u)
 	return u, exist, err
 }
 
@@ -158,7 +164,6 @@ func ResetSkey(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 			Data:    err,
 		})
 		Write(w, body)
-		return
 	} else {
 		h := sha256.New()
 		h.Write([]byte(uuid.Must(uuid.NewRandom()).String()))
@@ -202,7 +207,7 @@ func AuthToken(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		Write(w, ret)
 		return
 	}
-	u, exist, _ := SearchById(id)
+	u, exist, _ := SearchByID(id)
 	if !exist {
 		ret, _ := json.Marshal(&Response{
 			Code:    StatusServerAuthError,
@@ -313,14 +318,22 @@ func Send(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 
 	//发送地址
 	var port = GetPort(u.SendFrom)
-	var sendUrl = conf.CQHttp + port + "/send_private_msg"
+	var sendURL = conf.CQHttp + port + "/send_private_msg"
 
 	//发起推送
 	var pushRet = &struct {
 		RetCode int64  `json:"retcode"`
 		Status  string `json:"status"`
 	}{}
-	resp, _ := http.Post(sendUrl, "application/x-www-form-urlencoded", strings.NewReader("user_id="+u.SendTo+"&message="+message))
+	resp, err := http.Post(sendURL, "application/x-www-form-urlencoded", strings.NewReader("user_id="+u.SendTo+"&message="+message))
+	if err != nil {
+		body, _ := json.Marshal(&Response{
+			Code:    StatusServerNetworkError,
+			Message: "服务端网络异常,请稍后再试",
+		})
+		Write(w, body)
+		return
+	}
 	defer resp.Body.Close()
 	content, _ := ioutil.ReadAll(resp.Body)
 	_ = json.Unmarshal(content, pushRet)
@@ -435,14 +448,22 @@ func GroupSend(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 
 	//发送地址
 	var port = GetPort(u.GroupFrom)
-	var sendUrl = conf.CQHttp + port + "/send_group_msg"
+	var sendURL = conf.CQHttp + port + "/send_group_msg"
 
 	//发起推送
 	var pushRet = &struct {
 		RetCode int64  `json:"retcode"`
 		Status  string `json:"status"`
 	}{}
-	resp, _ := http.Post(sendUrl, "application/x-www-form-urlencoded", strings.NewReader("group_id="+u.GroupTo+"&message="+message))
+	resp, err := http.Post(sendURL, "application/x-www-form-urlencoded", strings.NewReader("group_id="+u.GroupTo+"&message="+message))
+	if err != nil {
+		body, _ := json.Marshal(&Response{
+			Code:    StatusServerNetworkError,
+			Message: "服务端网络异常,请稍后再试",
+		})
+		Write(w, body)
+		return
+	}
 	defer resp.Body.Close()
 	content, _ := ioutil.ReadAll(resp.Body)
 	_ = json.Unmarshal(content, pushRet)
@@ -512,7 +533,15 @@ func MessageFilterAll(w http.ResponseWriter, r *http.Request, _ httprouter.Param
 func AuthGithub(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var code = r.URL.Query().Get("code")
 	var target = fmt.Sprintf("https://qtqq-login.now.sh/api?code=%s", code)
-	resp, _ := http.Get(target)
+	resp, err := http.Get(target)
+	if err != nil {
+		body, _ := json.Marshal(&Response{
+			Code:    StatusServerNetworkError,
+			Message: "服务端网络异常,请稍后再试",
+		})
+		Write(w, body)
+		return
+	}
 	defer resp.Body.Close()
 	_c, _ := ioutil.ReadAll(resp.Body)
 	//结果解析
@@ -529,7 +558,7 @@ func AuthGithub(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		idRaw := response.Data.(map[string]interface{})["id"].(json.Number)
 		id, _ := idRaw.Int64()
 		//判断 是否存在 id 存在则不变 不存在则创建用户
-		u, exist, err := SearchById(id)
+		u, exist, err := SearchByID(id)
 		if !exist {
 			//没找到 注册用户
 			err = NewUser(id, "github")
@@ -542,7 +571,7 @@ func AuthGithub(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 				Write(w, ret)
 				return
 			}
-			u, _, _ = SearchById(id)
+			u, _, _ = SearchByID(id)
 		}
 		//TODO 找到了 检测用户状态
 		if u != nil && (!u.Status || u.Fouls >= FoulsNumber) {
@@ -581,8 +610,10 @@ func AuthGitee(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var cid = "6c40ca5143961574faba6b8b9e49b5b6ecc9345ce8cc82eaa2b2d2a30b5f3c70"
 	var sid = "bbfa2ef7648999dc66cd687228d57e8454c3f993b96988d488c5ef4e6af7f1e7"
 	var code = r.URL.Query().Get("code")
-	var target = fmt.Sprintf("https://gitee.com/oauth/token?grant_type=authorization_code&code=%s&client_id=%s&redirect_uri=%s&client_secret=%s", code, cid, "", sid)
+	var callback = "https://cp.xuthus.cc"
+	var target = fmt.Sprintf("https://gitee.com/oauth/token?grant_type=authorization_code&code=%s&client_id=%s&redirect_uri=%s&client_secret=%s", code, cid, callback, sid)
 	resp, err := http.Post(target, "application/json; charset=utf-8", nil)
+	//请求结果
 	if err != nil {
 		ret, _ := json.Marshal(&Response{
 			Code:    StatusServerNetworkError,
@@ -593,6 +624,7 @@ func AuthGitee(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		return
 	}
 	defer resp.Body.Close()
+	//结果解析
 	_c, _ := ioutil.ReadAll(resp.Body)
 	var token = &struct {
 		AccessToken  string `json:"access_token"`
@@ -622,7 +654,7 @@ func AuthGitee(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	//登录成功 拿到用户信息 下一步操作
 	{
 		//判断 是否存在 id 存在则不变 不存在则创建用户
-		u, exist, err := SearchById(user.ID)
+		u, exist, err := SearchByID(user.ID)
 		if !exist {
 			//没找到 注册用户
 			err = NewUser(user.ID, "gitee")
@@ -635,7 +667,7 @@ func AuthGitee(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 				Write(w, ret)
 				return
 			}
-			u, _, _ = SearchById(user.ID)
+			u, _, _ = SearchByID(user.ID)
 		}
 		//TODO 找到了 检测用户状态
 		if u != nil && (!u.Status || u.Fouls >= FoulsNumber) {
@@ -669,13 +701,149 @@ func AuthGitee(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	}
 }
 
-// AuthCoding 授权coding登陆
-func AuthCoding(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	var cid = "ac1d099d7e35f7db8992f90c88b2f216"
-	var sid = "20d895763a68e4bb629b37d2db26bf223b73f455"
+// AuthOSC 授权开源中国登陆
+func AuthOSC(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	var cid = "VVAVHVNBpANuC6PFuZhn"
+	var sid = "Hn6nhjEceUijsxmzEWypiQlP2nE9cN5Z"
 	var code = r.URL.Query().Get("code")
-	var target = fmt.Sprintf("https://%s.coding.net/api/oauth/access_token?client_id=%s&client_secret=%s&grant_type=authorization_code&code=%s", "xuthus5",cid, sid, code)
-	resp, err := http.Get(target)
+	var callback = "https://cp.xuthus.cc"
+	var client = &http.Client{}
+	var target = fmt.Sprintf("https://www.oschina.net/action/openapi/token?client_id=%s&client_secret=%s&grant_type=authorization_code&redirect_uri=%s&code=%s", cid, sid, callback, code)
+	tokenReq, _ := http.NewRequest("GET", target, nil)
+	tokenReq.Header.Add("Content-Type", "application/json")
+	tokenReq.Header.Add("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36")
+	tokenResp, err := client.Do(tokenReq)
+	//请求结果
+	if err != nil {
+		ret, _ := json.Marshal(&Response{
+			Code:    StatusServerNetworkError,
+			Message: "服务端网络故障:" + err.Error(),
+			Data:    err,
+		})
+		Write(w, ret)
+		return
+	}
+	defer tokenResp.Body.Close()
+	//结果解析
+	_c, _ := ioutil.ReadAll(tokenResp.Body)
+	var token = &struct {
+		AccessToken  string `json:"access_token"`
+		RefreshToken string `json:"refresh_token"`
+		TokenType    string `json:"token_type"`
+		ExpiresIn    int    `json:"expires_in"`
+		UID          int    `json:"uid"`
+	}{}
+	if err = json.Unmarshal(_c, token); err != nil {
+		ret, _ := json.Marshal(&Response{
+			Code:    StatusServerNetworkError,
+			Message: "服务端故障:" + err.Error(),
+			Data:    err,
+		})
+		Write(w, ret)
+		return
+	}
+
+	//将AccessToken 请求用户信息
+	var userInfo = fmt.Sprintf("https://www.oschina.net/action/openapi/user?access_token=%s&dataType=json", token.AccessToken)
+	userReq, _ := http.NewRequest("GET", userInfo, nil)
+	userReq.Header.Add("Content-Type", "application/json")
+	userReq.Header.Add("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36")
+	userResq, err := client.Do(userReq)
+	if err != nil {
+		ret, _ := json.Marshal(&Response{
+			Code:    StatusServerNetworkError,
+			Message: "服务端网络故障:" + err.Error(),
+			Data:    err,
+		})
+		Write(w, ret)
+		return
+	}
+	defer userResq.Body.Close()
+	ub, _ := ioutil.ReadAll(userResq.Body)
+	var user = new(PlatformUser)
+	if err = json.Unmarshal(ub, user); err != nil {
+		ret, _ := json.Marshal(&Response{
+			Code:    StatusServerNetworkError,
+			Message: "服务端故障:" + err.Error(),
+			Data:    err,
+		})
+		Write(w, ret)
+		return
+	}
+	//解析出来的 user.ID 为 0 肯定是有问题的
+	if user.ID == 0 {
+		ret, _ := json.Marshal(&Response{
+			Code:    StatusServerAuthError,
+			Message: "授权认证出错",
+			Data:    "授权认证出错",
+		})
+		Write(w, ret)
+		return
+	}
+	//登录成功 拿到用户信息 下一步操作
+	{
+		//判断 是否存在 id 存在则不变 不存在则创建用户
+		u, exist, err := SearchByID(user.ID)
+		if !exist {
+			//没找到 注册用户
+			err = NewUser(user.ID, "osc")
+			if err != nil {
+				ret, _ := json.Marshal(&Response{
+					Code:    StatusServerGeneralError,
+					Message: "新用户初始化故障",
+					Data:    err.Error(),
+				})
+				Write(w, ret)
+				return
+			}
+			u, _, _ = SearchByID(user.ID)
+		}
+		//TODO 找到了 检测用户状态
+		if u != nil && (!u.Status || u.Fouls >= FoulsNumber) {
+			//用户禁用
+			ret, _ := json.Marshal(&Response{
+				Code:    StatusServerForbid,
+				Message: "用户被禁用:由于多次推送违规内容,您的账号目前已被系统锁定,请联系管理员处理",
+				Data:    nil,
+			})
+			Write(w, ret)
+			return
+		}
+		//找到了 下发jwt token
+		token, err := DistributeToken(user.ID)
+		if err != nil {
+			ret, _ := json.Marshal(&Response{
+				Code:    StatusServerAuthError,
+				Message: "下发token失败:" + err.Error(),
+				Data:    err,
+			})
+			Write(w, ret)
+			return
+		}
+		ret, _ := json.Marshal(&Response{
+			Code:    StatusOk,
+			Message: token,
+			Data:    u,
+		})
+		Write(w, ret)
+		return
+	}
+}
+
+// AuthQQ 授权QQ登陆
+func AuthQQ(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+
+}
+
+// AuthBaidu 授权百度登陆
+func AuthBaidu(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	var cid = "N1ZwbPnEP0igyAG9vo6EaZMo"
+	var sid = "On533MxpQA5mp2gyMtaLCeoYfOrUDbdz"
+	var code = r.URL.Query().Get("code")
+	var callback = "https://cp.xuthus.cc"
+	var target = fmt.Sprintf("https://openapi.baidu.com/oauth/2.0/token?grant_type=authorization_code&code=%s&client_id=%s&client_secret=%s&redirect_uri=%s", code, cid, sid, callback)
+	resp, err := http.Post(target, "application/json; charset=utf-8", nil)
+	//请求结果
 	if err != nil {
 		ret, _ := json.Marshal(&Response{
 			Code:    StatusServerNetworkError,
@@ -686,15 +854,103 @@ func AuthCoding(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		return
 	}
 	defer resp.Body.Close()
+	//结果解析
 	_c, _ := ioutil.ReadAll(resp.Body)
 	var token = &struct {
-		AccessToken  string `json:"access_token"`
-		RefreshToken string `json:"refresh_token"`
-		Team         string `json:"team"`
-		ExpiresIn    string `json:"expires_in"`
+		AccessToken   string `json:"access_token"`
+		ExpiresIn     int    `json:"expires_in"`
+		RefreshToken  string `json:"refresh_token"`
+		Scope         string `json:"scope"`
+		SessionKey    string `json:"session_key"`
+		SessionSecret string `json:"session_secret"`
 	}{}
 	_ = json.Unmarshal(_c, token)
-	//获取用户信息
+
+	//将AccessToken 请求用户信息
+	var userInfo = fmt.Sprintf("https://openapi.baidu.com/rest/2.0/passport/users/getInfo?access_token=%s", token.AccessToken)
+	_u, err := http.Get(userInfo)
+	if err != nil {
+		ret, _ := json.Marshal(&Response{
+			Code:    StatusServerNetworkError,
+			Message: "服务端网络故障:" + err.Error(),
+			Data:    err,
+		})
+		Write(w, ret)
+		return
+	}
+	defer _u.Body.Close()
+	ub, _ := ioutil.ReadAll(_u.Body)
+	var user = &struct {
+		Userid        string `json:"userid"`
+		Username      string `json:"username"`
+		Realname      string `json:"realname"`
+		Userdetail    string `json:"userdetail"`
+		Birthday      string `json:"birthday"`
+		Marriage      string `json:"marriage"`
+		Sex           string `json:"sex"`
+		Blood         string `json:"blood"`
+		Constellation string `json:"constellation"`
+		Figure        string `json:"figure"`
+		Education     string `json:"education"`
+		Trade         string `json:"trade"`
+		Job           string `json:"job"`
+		BirthdayYear  string `json:"birthday_year"`
+		BirthdayMonth string `json:"birthday_month"`
+		BirthdayDay   string `json:"birthday_day"`
+	}{}
+	_ = json.Unmarshal(ub, user)
+	//登录成功 拿到用户信息 下一步操作
+	{
+		//判断 是否存在 id 存在则不变 不存在则创建用户
+		u, exist, err := SearchByOID(user.Userid)
+		if !exist {
+			//没找到 注册用户
+			err = NewUser(user.ID, "gitee")
+			if err != nil {
+				ret, _ := json.Marshal(&Response{
+					Code:    StatusServerGeneralError,
+					Message: "新用户初始化故障",
+					Data:    err.Error(),
+				})
+				Write(w, ret)
+				return
+			}
+			u, _, _ = SearchByID(user.ID)
+		}
+		//TODO 找到了 检测用户状态
+		if u != nil && (!u.Status || u.Fouls >= FoulsNumber) {
+			//用户禁用
+			ret, _ := json.Marshal(&Response{
+				Code:    StatusServerForbid,
+				Message: "用户被禁用:由于多次推送违规内容,您的账号目前已被系统锁定,请联系管理员处理",
+				Data:    nil,
+			})
+			Write(w, ret)
+			return
+		}
+		//找到了 下发jwt token
+		token, err := DistributeToken(user.ID)
+		if err != nil {
+			ret, _ := json.Marshal(&Response{
+				Code:    StatusServerAuthError,
+				Message: "下发token失败:" + err.Error(),
+				Data:    err,
+			})
+			Write(w, ret)
+			return
+		}
+		ret, _ := json.Marshal(&Response{
+			Code:    StatusOk,
+			Message: token,
+			Data:    u,
+		})
+		Write(w, ret)
+		return
+	}
+}
+
+// AuthWeibo 授权微博登陆
+func AuthWeibo(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 
 }
 
@@ -731,7 +987,7 @@ func Bind(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	}
 
 	//检测用户是否存在
-	if _, exist, _ := SearchById(id); !exist {
+	if _, exist, _ := SearchByID(id); !exist {
 		ret, _ := json.Marshal(&Response{
 			Code:    StatusServerAuthError,
 			Message: "用户不存在,非法操作",
@@ -791,7 +1047,7 @@ func GroupBind(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	}
 
 	//检测用户是否存在
-	if _, exist, _ := SearchById(id); !exist {
+	if _, exist, _ := SearchByID(id); !exist {
 		ret, _ := json.Marshal(&Response{
 			Code:    StatusServerAuthError,
 			Message: "用户不存在,非法操作",
@@ -838,6 +1094,7 @@ func UserCount(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	Write(w, body)
 }
 
+// Run 路由入口
 func Run() {
 	fmt.Println("程序启动:" + conf.ProjectName)
 	router := httprouter.New()
@@ -854,9 +1111,9 @@ func Run() {
 	router.GET("/ping", Ping)
 
 	// 登录注册授权
+	router.GET("/auth/osc", AuthOSC)
 	router.GET("/auth/gitee", AuthGitee)
 	router.GET("/auth/github", AuthGithub)
-	router.GET("/auth/coding", AuthCoding)
 
 	// token检测
 	router.GET("/check", AuthToken)
@@ -887,5 +1144,6 @@ func Run() {
 	// 首页重定向
 	router.NotFound = http.RedirectHandler("https://cp.xuthus.cc", http.StatusFound)
 
-	log.Fatal(http.ListenAndServeTLS(conf.Server, "cert.crt", "key.key", router))
+	// log.Fatal(http.ListenAndServeTLS(conf.Server, "cert.crt", "key.key", router))
+	log.Fatal(http.ListenAndServe(conf.Server, router))
 }

@@ -2,7 +2,7 @@ environments:
   # 项目名称
   project_name: CoolPush
   # 服务地址端口配置
-  server: :443
+  server: :4433
   # github授权
   client_id: cc74ff2d2f067e5671f1
   client_secret: 456bcfbbdd1c3195521ec9ac686920bc4743eb9e
