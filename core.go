@@ -711,7 +711,7 @@ func AuthGitee(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	//登录成功 拿到用户信息 下一步操作
 	{
 		//判断 是否存在 pid 存在则不变 不存在则创建用户
-		u, exist, err := SearchByPID(user.PID,"gitee")
+		u, exist, err := SearchByPID(user.PID, "gitee")
 		if !exist {
 			//没找到 注册用户
 			err = NewUserByPid(user.PID, "gitee")
@@ -839,7 +839,7 @@ func AuthOSC(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	//登录成功 拿到用户信息 下一步操作
 	{
 		//判断 是否存在 Pid 存在则不变 不存在则创建用户
-		u, exist, err := SearchByPID(user.PID,"osc")
+		u, exist, err := SearchByPID(user.PID, "osc")
 		if !exist {
 			//没找到 注册用户
 			err = NewUserByPid(user.PID, "osc")
@@ -852,7 +852,7 @@ func AuthOSC(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 				Write(w, ret)
 				return
 			}
-			u, _, _ = SearchByPID(user.PID,"osc")
+			u, _, _ = SearchByPID(user.PID, "osc")
 		}
 		//TODO 找到了 检测用户状态
 		if u != nil && (!u.Status || u.Fouls >= FoulsNumber) {
@@ -1095,7 +1095,7 @@ func Run() {
 
 	if conf.HTTPS.Enable {
 		log.Fatal(http.ListenAndServeTLS(conf.Server, "cert.crt", "key.key", router))
-	}else{
+	} else {
 		log.Fatal(http.ListenAndServe(conf.Server, router))
 	}
 }
