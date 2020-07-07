@@ -2,18 +2,18 @@ environments:
   # 项目名称
   project_name: CoolPush
   # 服务地址端口配置
-  server: :4433
+  server: :443
   # github授权
   client_id: cc74ff2d2f067e5671f1
   client_secret: 456bcfbbdd1c3195521ec9ac686920bc4743eb9e
   # jwt 配置项
   jwt:
     skey: SWtPI3RNJmUjQWFaVXVYUg
-    issuer: qtqq
-    subject: qtqq_auth_login
+    issuer: CoolPush
+    subject: cool_push_auth_login
     expires: 86400
   # mysql连接
-  mysql: root:root@tcp(127.0.0.1:3306)/qtqq?charset=utf8mb4&collation=utf8mb4_general_ci&parseTime=True&loc=Local
+  mysql: root:root@tcp(127.0.0.1:3306)/coolpush?charset=utf8mb4&collation=utf8mb4_general_ci&parseTime=True&loc=Local
   # 发起send的地址 不需要端口
   cqhttp: http://127.0.0.1
   # 机器人列表 QQ:PORT

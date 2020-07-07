@@ -1,4 +1,4 @@
-module qtqq
+module CoolPush
 
 go 1.13
 

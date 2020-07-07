@@ -42,7 +42,7 @@ type PlatformUser struct {
 
 // CustomClaims 是JWT在生成令牌时的某些声明
 type CustomClaims struct {
-	ID int64 `json:"id"` //用户ID
+	Skey string `json:"skey"` //用户的Skey
 	jwt.StandardClaims
 }
 

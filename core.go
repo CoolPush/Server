@@ -22,13 +22,13 @@ import (
 	"github.com/dgrijalva/jwt-go"
 )
 
-// NewUser 注册新用户
-func NewUser(id int64, method string) error {
+// NewUserByPid 通过平台返回的Pid注册新用户
+func NewUserByPid(id int64, method string) error {
 	h := sha256.New()
 	h.Write([]byte(uuid.Must(uuid.NewRandom()).String()))
 	key := hex.EncodeToString(h.Sum(nil))[:32]
 	var u = &User{
-		Id:        id,
+		Pid:       id,
 		LoginType: method,
 		Skey:      key,
 		CreateAt:  time.Now().Format("2006-01-02 15:04:05"),
@@ -38,10 +38,26 @@ func NewUser(id int64, method string) error {
 	return err
 }
 
-// DistributeToken 分发token
-func DistributeToken(id int64) (string, error) {
+// NewUserByOid 通过平台返回的Oid注册新用户
+func NewUserByOid(id string, method string) error {
+	h := sha256.New()
+	h.Write([]byte(uuid.Must(uuid.NewRandom()).String()))
+	key := hex.EncodeToString(h.Sum(nil))[:32]
+	var u = &User{
+		Oid:       id,
+		LoginType: method,
+		Skey:      key,
+		CreateAt:  time.Now().Format("2006-01-02 15:04:05"),
+		Status:    true,
+	}
+	_, err := engine.Insert(u)
+	return err
+}
+
+// DistributeToken 分发token 依赖ID 该ID是记录ID
+func DistributeToken(skey string) (string, error) {
 	claims := CustomClaims{
-		ID: id,
+		Skey: skey,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: time.Now().Unix() + conf.Jwt.Expires,
 			NotBefore: time.Now().Unix(),
@@ -57,7 +73,7 @@ func DistributeToken(id int64) (string, error) {
 	return ss, nil
 }
 
-// CheckToken 检验token的函数 返回token中的 id 以及错误信息
+// CheckToken 检验token的函数 返回token中的 记录id 以及错误信息
 func CheckToken(tokenString string) (int64, error) {
 	if tokenString == "" {
 		return 0, errors.New("请求非法")
@@ -71,10 +87,11 @@ func CheckToken(tokenString string) (int64, error) {
 	if token.Valid {
 		if c, ok := token.Claims.(*CustomClaims); ok {
 			//检测
-			if _, exist, _ := SearchByID(c.ID); !exist {
+			if u, exist, _ := SearchByKey(c.Skey); !exist {
 				return 0, errors.New("用户与token不匹配")
+			} else {
+				return u.Id, nil
 			}
-			return c.ID, nil
 		}
 	}
 
@@ -91,16 +108,23 @@ func CheckToken(tokenString string) (int64, error) {
 }
 
 // SearchByKey 通过key查询用户是否存在
-func SearchByKey(key string) (*User, error) {
+func SearchByKey(key string) (*User, bool, error) {
 	var u = &User{}
-	_, err := engine.Where("skey = ?", key).Get(u)
-	return u, err
+	exist, err := engine.Where("skey = ?", key).Get(u)
+	return u, exist, err
 }
 
-// SearchByID 通过id查询用户是否存在
+// SearchByID 通过记录id查询用户是否存在
 func SearchByID(id int64) (*User, bool, error) {
 	var u = &User{}
 	exist, err := engine.ID(id).Get(u)
+	return u, exist, err
+}
+
+// SearchByPID 通过Pid查询用户是否存在
+func SearchByPID(id int64) (*User, bool, error) {
+	var u = &User{}
+	exist, err := engine.Where("pid = ?", id).Get(u)
 	return u, exist, err
 }
 
@@ -133,6 +157,27 @@ func Ping(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	Write(w, response)
 }
 
+// Migrate 联通性检测
+func Migrate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	type old struct {
+		Gid       int64  `json:"gid" xorm:"pk autoincr"`                                       //id 数据库的记录id
+		Count     int64  `json:"count" xorm:"default(0)"`                                      //用户使用统计
+		Fouls     int64  `json:"fouls" xorm:"default(0)"`                                      //违规次数
+		LastSend  int64  `json:"lastSend" xorm:"default(0)"`                                   //上次发送时间
+		Skey      string `json:"skey" xorm:"varchar(32) notnull unique"`                       //发送关键钥  send_key
+		SendTo    string `json:"sendTo" xorm:"varchar(10) default('')"`                        //用户QQ
+		SendFrom  string `json:"sendFrom" xorm:"varchar(10) default('')"`                      //发送QQ
+		GroupTo   string `json:"groupTo" xorm:"varchar(10) default('')"`                       //用户群
+		GroupFrom string `json:"groupFrom" xorm:"varchar(10) default('')"`                     //群推送QQ机器人
+		CreateAt  string `json:"createTime" xorm:"varchar(19) default('2020-06-01 00:00:00')"` //注册时间
+		Status    bool   `json:"status" xorm:"default(true)"`                                  //账户状态
+	}
+
+	var table = make([]old, 0)
+	engine.Find(&table)
+
+}
+
 // ResetSkey 重置Skey
 func ResetSkey(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	//先检验token
@@ -146,7 +191,7 @@ func ResetSkey(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		return
 	}
 
-	//获取id
+	//获取记录id
 	var _id = r.URL.Query().Get("id")
 	if _id == "" {
 		body, _ := json.Marshal(&Response{
@@ -169,10 +214,8 @@ func ResetSkey(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		h.Write([]byte(uuid.Must(uuid.NewRandom()).String()))
 		key := hex.EncodeToString(h.Sum(nil))[:32]
 		var u = &User{
-			Id:       id,
-			Skey:     key,
-			CreateAt: time.Now().Format("2006-01-02 15:04:05"),
-			Status:   true,
+			Id:   id,
+			Skey: key,
 		}
 		if _, err = engine.ID(id).Cols("skey").Update(u); err != nil {
 			body, _ := json.Marshal(&Response{
@@ -257,7 +300,7 @@ func Send(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 		return
 	}
 
-	u, err := SearchByKey(p.ByName("skey"))
+	u, _, err := SearchByKey(p.ByName("skey"))
 	if err != nil {
 		//失败 返回错误
 		body, _ := json.Marshal(&Response{
@@ -387,7 +430,7 @@ func GroupSend(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 		return
 	}
 
-	u, err := SearchByKey(p.ByName("skey"))
+	u, _, err := SearchByKey(p.ByName("skey"))
 	if err != nil {
 		//失败 返回错误
 		body, _ := json.Marshal(&Response{
@@ -561,7 +604,7 @@ func AuthGithub(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		u, exist, err := SearchByID(id)
 		if !exist {
 			//没找到 注册用户
-			err = NewUser(id, "github")
+			err = NewUserByPid(id, "github")
 			if err != nil {
 				ret, _ := json.Marshal(&Response{
 					Code:    StatusServerGeneralError,
@@ -585,7 +628,7 @@ func AuthGithub(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 			return
 		}
 		//找到了 下发jwt token
-		token, err := DistributeToken(id)
+		token, err := DistributeToken(u.Skey)
 		if err != nil {
 			ret, _ := json.Marshal(&Response{
 				Code:    StatusServerAuthError,
@@ -657,7 +700,7 @@ func AuthGitee(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		u, exist, err := SearchByID(user.ID)
 		if !exist {
 			//没找到 注册用户
-			err = NewUser(user.ID, "gitee")
+			err = NewUserByPid(user.ID, "gitee")
 			if err != nil {
 				ret, _ := json.Marshal(&Response{
 					Code:    StatusServerGeneralError,
@@ -681,7 +724,7 @@ func AuthGitee(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 			return
 		}
 		//找到了 下发jwt token
-		token, err := DistributeToken(user.ID)
+		token, err := DistributeToken(u.Skey)
 		if err != nil {
 			ret, _ := json.Marshal(&Response{
 				Code:    StatusServerAuthError,
@@ -786,7 +829,7 @@ func AuthOSC(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		u, exist, err := SearchByID(user.ID)
 		if !exist {
 			//没找到 注册用户
-			err = NewUser(user.ID, "osc")
+			err = NewUserByPid(user.ID, "osc")
 			if err != nil {
 				ret, _ := json.Marshal(&Response{
 					Code:    StatusServerGeneralError,
@@ -810,7 +853,7 @@ func AuthOSC(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 			return
 		}
 		//找到了 下发jwt token
-		token, err := DistributeToken(user.ID)
+		token, err := DistributeToken(u.Skey)
 		if err != nil {
 			ret, _ := json.Marshal(&Response{
 				Code:    StatusServerAuthError,
@@ -905,7 +948,7 @@ func AuthBaidu(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		u, exist, err := SearchByOID(user.Userid)
 		if !exist {
 			//没找到 注册用户
-			err = NewUser(user.ID, "gitee")
+			err = NewUserByOid(user.Userid, "baidu")
 			if err != nil {
 				ret, _ := json.Marshal(&Response{
 					Code:    StatusServerGeneralError,
@@ -915,7 +958,7 @@ func AuthBaidu(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 				Write(w, ret)
 				return
 			}
-			u, _, _ = SearchByID(user.ID)
+			u, _, _ = SearchByOID(user.Userid)
 		}
 		//TODO 找到了 检测用户状态
 		if u != nil && (!u.Status || u.Fouls >= FoulsNumber) {
@@ -929,7 +972,7 @@ func AuthBaidu(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 			return
 		}
 		//找到了 下发jwt token
-		token, err := DistributeToken(user.ID)
+		token, err := DistributeToken(u.Skey)
 		if err != nil {
 			ret, _ := json.Marshal(&Response{
 				Code:    StatusServerAuthError,
@@ -1109,6 +1152,8 @@ func Run() {
 
 	//连通性测试
 	router.GET("/ping", Ping)
+	//迁移接口
+	router.GET("/migrage", Migrate)
 
 	// 登录注册授权
 	router.GET("/auth/osc", AuthOSC)
