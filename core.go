@@ -27,7 +27,7 @@ func NewUserByPid(id int64, method string) error {
 	h := sha256.New()
 	h.Write([]byte(uuid.Must(uuid.NewRandom()).String()))
 	key := hex.EncodeToString(h.Sum(nil))[:32]
-	var u = &User{
+	var u = &Users{
 		Pid:       id,
 		LoginType: method,
 		Skey:      key,
@@ -43,7 +43,7 @@ func NewUserByOid(id string, method string) error {
 	h := sha256.New()
 	h.Write([]byte(uuid.Must(uuid.NewRandom()).String()))
 	key := hex.EncodeToString(h.Sum(nil))[:32]
-	var u = &User{
+	var u = &Users{
 		Oid:       id,
 		LoginType: method,
 		Skey:      key,
@@ -108,8 +108,8 @@ func CheckToken(tokenString string) (int64, error) {
 }
 
 // SearchByKey 通过key查询用户是否存在
-func SearchByKey(key string) (*User, bool, error) {
-	var u = &User{}
+func SearchByKey(key string) (*Users, bool, error) {
+	var u = &Users{}
 	exist, err := engine.Where("skey = ?", key).Get(u)
 	return u, exist, err
 }
@@ -159,30 +159,6 @@ func Ping(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 
 // Migrate 联通性检测
 func Migrate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	var table = make([]OldUser, 0)
-	engine.Find(&table)
-	var u = new(User)
-	for _, v := range table {
-		u = &User{
-			Pid:       v.Gid,
-			Count:     v.Count,
-			Fouls:     v.Fouls,
-			LastSend:  v.LastSend,
-			Oid:       "",
-			Skey:      v.Skey,
-			SendTo:    v.SendTo,
-			SendFrom:  v.SendFrom,
-			GroupTo:   v.GroupTo,
-			GroupFrom: v.GroupFrom,
-			CreateAt:  v.CreateAt,
-			LoginType: "github",
-			Status:    true,
-		}
-		if _, err := engine.Insert(u); err != nil {
-			fmt.Println(v.Gid, err)
-		}
-	}
-
 }
 
 // ResetSkey 重置Skey
@@ -220,7 +196,7 @@ func ResetSkey(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		h := sha256.New()
 		h.Write([]byte(uuid.Must(uuid.NewRandom()).String()))
 		key := hex.EncodeToString(h.Sum(nil))[:32]
-		var u = &User{
+		var u = &Users{
 			Id:   id,
 			Skey: key,
 		}
@@ -927,7 +903,7 @@ func Bind(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	}
 	to := r.URL.Query().Get("sendTo")
 	from := r.URL.Query().Get("sendFrom")
-	var user = &User{
+	var user = &Users{
 		Id:       id,
 		SendTo:   to,
 		SendFrom: from,
@@ -987,7 +963,7 @@ func GroupBind(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	}
 	to := r.URL.Query().Get("groupTo")
 	from := r.URL.Query().Get("groupFrom")
-	var user = &User{
+	var user = &Users{
 		Id:        id,
 		GroupTo:   to,
 		GroupFrom: from,
