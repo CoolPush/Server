@@ -772,7 +772,6 @@ func AuthOSC(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		Write(w, ret)
 		return
 	}
-	fmt.Println("token", token, "raw", string(_c))
 
 	//将AccessToken 请求用户信息
 	var userInfo = fmt.Sprintf("https://www.oschina.net/action/openapi/user?access_token=%s&dataType=json", token.AccessToken)
@@ -791,7 +790,6 @@ func AuthOSC(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	}
 	defer userResq.Body.Close()
 	ub, _ := ioutil.ReadAll(userResq.Body)
-	fmt.Println(string(ub))
 	var user = new(PlatformUser)
 	if err = json.Unmarshal(ub, user); err != nil {
 		ret, _ := json.Marshal(&Response{
