@@ -23,6 +23,10 @@ environments:
       client_id: VVAVHVNBpANuC6PFuZhn
       client_secret: Hn6nhjEceUijsxmzEWypiQlP2nE9cN5Z
       callback: https://cp.xuthus.cc
+    qq:
+      client_id: VVAVHVNBpANuC6PFuZhn
+      client_secret: Hn6nhjEceUijsxmzEWypiQlP2nE9cN5Z
+      callback: https%3a%2f%2fcp.xuthus.cc%2f%3f
   # jwt 配置项
   jwt:
     skey: SWtPI3RNJmUjQWFaVXVYUg

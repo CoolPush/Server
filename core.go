@@ -862,7 +862,105 @@ func AuthOSC(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 
 // AuthQQ 授权QQ登陆
 func AuthQQ(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-
+	var code = r.URL.Query().Get("code")
+	var target = fmt.Sprintf("https://graph.qq.com/oauth2.0/token?grant_type=authorization_code&code=%s&client_id=%s&redirect_uri=%s&client_secret=%s&fmt=json", code, conf.Oauth.QQ.ClientID, conf.Oauth.QQ.Callback, conf.Oauth.QQ.ClientSecret)
+	resp, err := http.Get(target)
+	//请求结果
+	if err != nil {
+		ret, _ := json.Marshal(&Response{
+			Code:    StatusServerNetworkError,
+			Message: "服务端网络故障:" + err.Error(),
+			Data:    err,
+		})
+		Write(w, ret)
+		return
+	}
+	defer resp.Body.Close()
+	//结果解析
+	_c, _ := ioutil.ReadAll(resp.Body)
+	var token = &struct {
+		AccessToken  string `json:"access_token"`
+		ExpiresIn    int    `json:"expires_in"`
+		RefreshToken string `json:"refresh_token"`
+	}{}
+	_ = json.Unmarshal(_c, token)
+	//将AccessToken 请求用户信息
+	var userInfo = fmt.Sprintf("https://graph.qq.com/oauth2.0/me?access_token=%s&fmt=json", token.AccessToken)
+	_u, err := http.Get(userInfo)
+	if err != nil {
+		ret, _ := json.Marshal(&Response{
+			Code:    StatusServerNetworkError,
+			Message: "服务端网络故障:" + err.Error(),
+			Data:    err,
+		})
+		Write(w, ret)
+		return
+	}
+	defer _u.Body.Close()
+	ub, _ := ioutil.ReadAll(_u.Body)
+	var user = &struct {
+		ClientID string
+		OpenID string
+	}{}
+	_ = json.Unmarshal(ub, user)
+	//解析出来的 user.ID 为 0 肯定是有问题的
+	if user.OpenID == "" || user.ClientID == "" {
+		ret, _ := json.Marshal(&Response{
+			Code:    StatusServerAuthError,
+			Message: "授权认证出错",
+			Data:    "授权认证出错",
+		})
+		Write(w, ret)
+		return
+	}
+	//登录成功 拿到用户信息 下一步操作
+	{
+		//判断 是否存在 pid 存在则不变 不存在则创建用户
+		u, exist, err := SearchByOID(user.OpenID, "qq")
+		if !exist {
+			//没找到 注册用户
+			err = NewUserByOid(user.OpenID, "qq")
+			if err != nil {
+				ret, _ := json.Marshal(&Response{
+					Code:    StatusServerGeneralError,
+					Message: "新用户初始化故障",
+					Data:    err.Error(),
+				})
+				Write(w, ret)
+				return
+			}
+			u, _, _ = SearchByOID(user.OpenID, "qq")
+		}
+		//TODO 找到了 检测用户状态
+		if u != nil && (!u.Status || u.Fouls >= FoulsNumber) {
+			//用户禁用
+			ret, _ := json.Marshal(&Response{
+				Code:    StatusServerForbid,
+				Message: "用户被禁用:由于多次推送违规内容,您的账号目前已被系统锁定,请联系管理员处理",
+				Data:    nil,
+			})
+			Write(w, ret)
+			return
+		}
+		//找到了 下发jwt token
+		token, err := DistributeToken(u.Skey)
+		if err != nil {
+			ret, _ := json.Marshal(&Response{
+				Code:    StatusServerAuthError,
+				Message: "下发token失败:" + err.Error(),
+				Data:    err,
+			})
+			Write(w, ret)
+			return
+		}
+		ret, _ := json.Marshal(&Response{
+			Code:    StatusOk,
+			Message: token,
+			Data:    u,
+		})
+		Write(w, ret)
+		return
+	}
 }
 
 // AuthBaidu 授权百度登陆
@@ -1034,6 +1132,7 @@ func Run() {
 	router.GET("/migrage", Migrate)
 
 	// 登录注册授权
+	router.GET("/auth/qq", AuthQQ)
 	router.GET("/auth/osc", AuthOSC)
 	router.GET("/auth/gitee", AuthGitee)
 	router.GET("/auth/github", AuthGithub)

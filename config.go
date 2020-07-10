@@ -49,6 +49,12 @@ type Oauth struct {
 		ClientSecret string `yaml:"client_secret"`
 		Callback     string `yaml:"callback"`
 	} `yaml:"osc"`
+
+	QQ struct {
+		ClientID     string `yaml:"client_id"`
+		ClientSecret string `yaml:"client_secret"`
+		Callback     string `yaml:"callback"`
+	} `yaml:"qq"`
 }
 
 // JWT json-web-token
