@@ -963,16 +963,6 @@ func AuthQQ(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	}
 }
 
-// AuthBaidu 授权百度登陆
-func AuthBaidu(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-
-}
-
-// AuthWeibo 授权微博登陆
-func AuthWeibo(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-
-}
-
 // Bind 用户绑定QQ
 func Bind(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	//先检验token
@@ -1113,6 +1103,40 @@ func UserCount(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	Write(w, body)
 }
 
+// Resume 恢复用户状态 只接受绑定的QQ号码
+func Resume(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	skey := r.URL.Query().Get("skey")
+	if skey == ""{
+		ret, _ := json.Marshal(&Response{
+			Code:    StatusClientError,
+			Message: "参数不能为空",
+		})
+		Write(w, ret)
+		return
+	}
+
+	// 检测是否存在
+	u,exist,_ := SearchByKey(skey)
+	if exist {
+		//存在
+		u.Fouls = 0
+		_, _ = engine.Where("skey = ?", skey).Cols("fouls").Update(u)
+		ret, _ := json.Marshal(&Response{
+			Code:    StatusOk,
+			Message: "解除封锁成功",
+		})
+		Write(w, ret)
+		return
+	}else{
+		ret, _ := json.Marshal(&Response{
+			Code:    StatusClientError,
+			Message: "skey不存在",
+		})
+		Write(w, ret)
+		return
+	}
+}
+
 // Run 路由入口
 func Run() {
 	fmt.Println("程序启动:" + conf.ProjectName)
@@ -1159,6 +1183,9 @@ func Run() {
 
 	//统计用户数量
 	router.GET("/count", UserCount)
+
+	//恢复用户状态
+	router.GET("/resume", Resume)
 
 	// 主页
 	//router.NotFound = http.FileServer(http.Dir("dist"))
