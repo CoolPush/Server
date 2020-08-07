@@ -102,7 +102,7 @@ func CheckToken(tokenString string) (int64, error) {
 			return 0, errors.New("token已过期")
 		}
 	} else {
-		return 0, errors.New("无法处理该token:" + err.Error())
+		return 0, errors.New("无法处理该token: " + err.Error())
 	}
 	return 0, errors.New("未知问题")
 }
@@ -148,17 +148,13 @@ func Write(w http.ResponseWriter, response []byte) {
 }
 
 // Ping 联通性检测
-func Ping(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func Ping(w http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
 	response, _ := json.Marshal(struct {
 		Ping string `json:"ping"`
 	}{
 		Ping: "PONG",
 	})
 	Write(w, response)
-}
-
-// Migrate 联通性检测
-func Migrate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 }
 
 // ResetSkey 重置Skey
@@ -274,7 +270,8 @@ func Send(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 		message = string(buf[:n])
 	}
 	//检测长度
-	if len(message) > 1500 || len(message) == 0 {
+	rawContent := []rune(message)
+	if len(rawContent) > 500 || len(rawContent) == 0 {
 		body, _ := json.Marshal(&Response{
 			Code:    StatusClientError,
 			Message: "文本超限或不能为空 推送失败",
@@ -404,7 +401,8 @@ func GroupSend(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 		message = string(buf[:n])
 	}
 	//检测长度
-	if len(message) > 1500 || len(message) == 0 {
+	rawContent := []rune(message)
+	if len(rawContent) > 1500 || len(rawContent) == 0 {
 		body, _ := json.Marshal(&Response{
 			Code:    StatusClientError,
 			Message: "文本超限或不能为空 推送失败",
@@ -1084,7 +1082,7 @@ func GroupBind(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 }
 
 // UserCount 统计用户数目
-func UserCount(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func UserCount(w http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
 	count, err := engine.Table(&User{}).Count()
 	if err != nil {
 		body, _ := json.Marshal(&Response{
@@ -1152,8 +1150,6 @@ func Run() {
 
 	//连通性测试
 	router.GET("/ping", Ping)
-	//迁移接口
-	router.GET("/migrage", Migrate)
 
 	// 登录注册授权
 	router.GET("/auth/qq", AuthQQ)
