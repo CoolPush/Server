@@ -5,6 +5,8 @@ import "github.com/dgrijalva/jwt-go"
 const (
 	FoulsNumber              = 10    //违规 FoulsNumber 次后 账号将被封禁
 	SendLimit                = 10000 //发送次数限制 当日发送次数超过 SendLimit 后禁止发送
+	SendLength				 = 1500  //指定QQ消息最大发送长度
+	RecvBuff				 = 2048  //指定QQ消息接收缓存长度
 	StatusOk                 = 200   //处理成功
 	StatusClientError        = 400   //客户端统一(参数缺失)错误
 	StatusServerGeneralError = 500   //服务端通用错误

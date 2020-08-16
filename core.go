@@ -265,13 +265,13 @@ func Send(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	}
 	//都为空? 尝试获取raw
 	if message == "" {
-		buf := make([]byte, 2048)
+		buf := make([]byte, RecvBuff)
 		n, _ := r.Body.Read(buf)
 		message = string(buf[:n])
 	}
 	//检测长度
 	rawContent := []rune(message)
-	if len(rawContent) > 500 || len(rawContent) == 0 {
+	if len(rawContent) > SendLength || len(rawContent) == 0 {
 		body, _ := json.Marshal(&Response{
 			Code:    StatusClientError,
 			Message: "文本超限或不能为空 推送失败",
@@ -396,13 +396,13 @@ func GroupSend(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	}
 	//都为空? 尝试获取raw
 	if message == "" {
-		buf := make([]byte, 2048)
+		buf := make([]byte, RecvBuff)
 		n, _ := r.Body.Read(buf)
 		message = string(buf[:n])
 	}
 	//检测长度
 	rawContent := []rune(message)
-	if len(rawContent) > 1500 || len(rawContent) == 0 {
+	if len(rawContent) > SendLength || len(rawContent) == 0 {
 		body, _ := json.Marshal(&Response{
 			Code:    StatusClientError,
 			Message: "文本超限或不能为空 推送失败",
