@@ -369,11 +369,10 @@ func Send(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 			Data:    nil,
 		}
 	} else if pushRet.RetCode == 100 {
-		fmt.Println("推送内容:", "user_id="+u.SendTo+"&message="+message)
 		ret = &Response{
 			Code:    StatusClientError,
 			Message: pushRet.Status,
-			Data:    "推送内容格式异常",
+			Data:    "推送异常,请从QQ列表删除机器人并重新添加好友关系",
 		}
 	} else {
 		ret = &Response{
