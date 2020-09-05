@@ -311,8 +311,6 @@ func Send(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	}
 	//内容 --> 敏感词过滤
 	message = filter.Replace(message, '*')
-	//内容 --> 字符编码
-	message = url.QueryEscape(message)
 
 	//检测发送次数是否达到上限 是则不允许再次发送
 	if u.Count > SendLimit {
@@ -363,6 +361,9 @@ func Send(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 		_t, _ := json.Marshal(ret)
 		Write(w, _t)
 	}else{
+		//内容 --> 字符编码
+		message = url.QueryEscape(message)
+
 		//发送地址
 		var port = GetPort(u.SendFrom)
 		var sendURL = conf.CQHttp + port + "/send_private_msg"
