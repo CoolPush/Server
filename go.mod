@@ -10,5 +10,6 @@ require (
 	github.com/importcjj/sensitive v0.0.0-20200106142752-42d1c505be7b
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/kr/pretty v0.2.0 // indirect
+	github.com/wxpusher/wxpusher-sdk-go v1.0.3
 	gopkg.in/yaml.v2 v2.3.0
 )

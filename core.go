@@ -20,6 +20,9 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/dgrijalva/jwt-go"
+
+	"github.com/wxpusher/wxpusher-sdk-go"
+	wxModel "github.com/wxpusher/wxpusher-sdk-go/model"
 )
 
 // NewUserByPid 通过平台返回的Pid注册新用户
@@ -339,50 +342,72 @@ func Send(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 		})
 	}
 
-	//发送地址
-	var port = GetPort(u.SendFrom)
-	var sendURL = conf.CQHttp + port + "/send_private_msg"
-
-	//发起推送
-	var pushRet = &struct {
-		RetCode int64  `json:"retcode"`
-		Status  string `json:"status"`
-	}{}
-	resp, err := http.Post(sendURL, "application/x-www-form-urlencoded", strings.NewReader("user_id="+u.SendTo+"&message="+message))
-	if err != nil {
-		body, _ := json.Marshal(&Response{
-			Code:    StatusServerNetworkError,
-			Message: "服务端网络异常,请稍后再试",
-		})
-		Write(w, body)
-		return
-	}
-	defer resp.Body.Close()
-	content, _ := ioutil.ReadAll(resp.Body)
-	_ = json.Unmarshal(content, pushRet)
-
-	var ret = new(Response)
-	if pushRet.RetCode == 0 {
-		ret = &Response{
+	//检测推送类型 qq/wx
+	var pushType = r.URL.Query().Get("type")
+	if pushType == "wx" {
+		err := SendByWx(u.WxPushUid, message)
+		if err != nil {
+			//转换失败 说明id有问题
+			ret, _ := json.Marshal(&Response{
+				Code:    StatusServerGeneralError,
+				Message: "微信推送异常:"+err.Error(),
+			})
+			Write(w, ret)
+			return
+		}
+		ret := &Response{
 			Code:    StatusOk,
 			Message: "ok",
 			Data:    nil,
 		}
-	} else if pushRet.RetCode == 100 {
-		ret = &Response{
-			Code:    StatusClientError,
-			Message: pushRet.Status,
-			Data:    "推送异常,请从QQ列表删除机器人并重新添加好友关系",
+		_t, _ := json.Marshal(ret)
+		Write(w, _t)
+	}else{
+		//发送地址
+		var port = GetPort(u.SendFrom)
+		var sendURL = conf.CQHttp + port + "/send_private_msg"
+
+		//发起推送
+		var pushRet = &struct {
+			RetCode int64  `json:"retcode"`
+			Status  string `json:"status"`
+		}{}
+		resp, err := http.Post(sendURL, "application/x-www-form-urlencoded", strings.NewReader("user_id="+u.SendTo+"&message="+message))
+		if err != nil {
+			body, _ := json.Marshal(&Response{
+				Code:    StatusServerNetworkError,
+				Message: "服务端网络异常,请稍后再试",
+			})
+			Write(w, body)
+			return
 		}
-	} else {
-		ret = &Response{
-			Code:    StatusClientError,
-			Message: pushRet.Status,
-			Data:    "推送异常",
+		defer resp.Body.Close()
+		content, _ := ioutil.ReadAll(resp.Body)
+		_ = json.Unmarshal(content, pushRet)
+
+		var ret = new(Response)
+		if pushRet.RetCode == 0 {
+			ret = &Response{
+				Code:    StatusOk,
+				Message: "ok",
+				Data:    nil,
+			}
+		} else if pushRet.RetCode == 100 {
+			ret = &Response{
+				Code:    StatusClientError,
+				Message: pushRet.Status,
+				Data:    "推送异常,请从QQ列表删除机器人并重新添加好友关系",
+			}
+		} else {
+			ret = &Response{
+				Code:    StatusClientError,
+				Message: pushRet.Status,
+				Data:    "推送异常",
+			}
 		}
+		_t, _ := json.Marshal(ret)
+		Write(w, _t)
 	}
-	_t, _ := json.Marshal(ret)
-	Write(w, _t)
 }
 
 // GroupSend 发起推送
@@ -582,7 +607,7 @@ func AuthGithub(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		idRaw := response.Data.(map[string]interface{})["id"].(json.Number)
 		id, _ := idRaw.Int64()
 		//判断 是否存在 pid 存在则不变 不存在则创建用户
-		u, exist, err := SearchByPID(id,"github")
+		u, exist, err := SearchByPID(id, "github")
 		if !exist {
 			//没找到 注册用户
 			err = NewUserByPid(id, "github")
@@ -595,7 +620,7 @@ func AuthGithub(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 				Write(w, ret)
 				return
 			}
-			u, _, _ = SearchByPID(id,"github")
+			u, _, _ = SearchByPID(id, "github")
 		}
 		//TODO 找到了 检测用户状态
 		if u != nil && (!u.Status || u.Fouls >= FoulsNumber) {
@@ -898,7 +923,7 @@ func AuthQQ(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	ub, _ := ioutil.ReadAll(_u.Body)
 	var user = &struct {
 		ClientID string
-		OpenID string
+		OpenID   string
 	}{}
 	_ = json.Unmarshal(ub, user)
 	//解析出来的 user.ID 为 0 肯定是有问题的
@@ -1104,7 +1129,7 @@ func UserCount(w http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
 // Resume 恢复用户状态 只接受绑定的QQ号码
 func Resume(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	skey := r.URL.Query().Get("skey")
-	if skey == ""{
+	if skey == "" {
 		ret, _ := json.Marshal(&Response{
 			Code:    StatusClientError,
 			Message: "参数不能为空",
@@ -1114,7 +1139,7 @@ func Resume(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	}
 
 	// 检测是否存在
-	u,exist,_ := SearchByKey(skey)
+	u, exist, _ := SearchByKey(skey)
 	if exist {
 		//存在
 		u.Fouls = 0
@@ -1125,7 +1150,7 @@ func Resume(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		})
 		Write(w, ret)
 		return
-	}else{
+	} else {
 		ret, _ := json.Marshal(&Response{
 			Code:    StatusClientError,
 			Message: "skey不存在",
@@ -1133,6 +1158,118 @@ func Resume(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		Write(w, ret)
 		return
 	}
+}
+
+// WxPusherCallback 回调绑定WxPusher UID
+func WxPusherCallback(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	buf := make([]byte, RecvBuff)
+	n, _ := r.Body.Read(buf)
+	var cb WxPusherResponse
+	err := json.Unmarshal(buf[:n], &cb)
+	if err != nil {
+		ret, _ := json.Marshal(&Response{
+			Code:    StatusClientError,
+			Message: "绑定失败",
+			Data:    err,
+		})
+		Write(w, ret)
+		return
+	}
+
+	if cb.Data.Extra == "" || cb.Data.UID == "" {
+		ret, _ := json.Marshal(&Response{
+			Code:    StatusClientError,
+			Message: "绑定失败",
+			Data:    err,
+		})
+		Write(w, ret)
+		return
+	}
+
+	id,err := strconv.ParseInt(cb.Data.Extra,10,64)
+	if err != nil {
+		ret, _ := json.Marshal(&Response{
+			Code:    StatusClientError,
+			Message: "绑定失败",
+			Data:    err,
+		})
+		Write(w, ret)
+		return
+	}
+	if u,exist,_ := SearchByID(id); !exist {
+		ret, _ := json.Marshal(&Response{
+			Code:    StatusServerAuthError,
+			Message: "用户不存在,非法操作",
+		})
+		Write(w, ret)
+		return
+	}else {
+		u.WxPushUid = cb.Data.UID
+		_, err = engine.Where("id = ?", id).Update(u)
+		if err != nil {
+			//转换失败 说明id有问题
+			ret, _ := json.Marshal(&Response{
+				Code:    StatusServerAuthError,
+				Message: "绑定失败",
+			})
+			Write(w, ret)
+			return
+		}
+	}
+	ret, _ := json.Marshal(&Response{
+		Code:    StatusOk,
+		Message: "ok!",
+	})
+	Write(w, ret)
+	return
+}
+
+// GenWxPusherQrCode 生成绑定WxPusher 的二维码
+func GenWxPusherQrCode(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	//先检验token
+	tokenString := r.Header.Get("token")
+	uid, err := CheckToken(tokenString)
+	if err != nil {
+		ret, _ := json.Marshal(&Response{
+			Code:    StatusServerAuthError,
+			Message: err.Error(),
+		})
+		Write(w, ret)
+		return
+	}
+
+	qrcode := wxModel.Qrcode{AppToken: conf.WxPusherToken, Extra: strconv.FormatInt(uid, 10)}
+	qrcodeResp, err := wxpusher.CreateQrcode(&qrcode)
+	if err != nil {
+		ret, _ := json.Marshal(&Response{
+			Code:    StatusServerAuthError,
+			Message: err.Error(),
+		})
+		Write(w, ret)
+		return
+	}
+	body, _ := json.Marshal(&Response{
+		Code:    StatusOk,
+		Message: "ok",
+		Data:    qrcodeResp.Url,
+	})
+	Write(w, body)
+}
+
+func SendByWx(wxUid, content string) error {
+	if wxUid == "" {
+		return errors.New("未绑定微信")
+	}
+	if content == "" {
+		return errors.New("推送内容不能为空")
+	}
+
+	msg := wxModel.NewMessage(conf.WxPusherToken).SetContent(content).AddUId(wxUid)
+	_, err := wxpusher.SendMessage(msg)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // Run 路由入口
@@ -1148,7 +1285,7 @@ func Run() {
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	//连通性测试
+	// 连通性测试
 	router.GET("/ping", Ping)
 
 	// 登录注册授权
@@ -1167,7 +1304,7 @@ func Run() {
 	router.GET("/bind", Bind)
 	router.GET("/group_bind", GroupBind)
 
-	//检测敏感词
+	// 检测敏感词
 	router.GET("/filter", MessageFilterAll)
 	router.POST("/filter", MessageFilterAll)
 
@@ -1176,6 +1313,12 @@ func Run() {
 	router.POST("/send/:skey", Send)
 	router.GET("/group/:skey", GroupSend)
 	router.POST("/group/:skey", GroupSend)
+
+	// 获得WxPusher二维码
+	router.GET("/qr_code", GenWxPusherQrCode)
+
+	// WxPusher 回调
+	router.GET("/callback/wx_pusher", WxPusherCallback)
 
 	//统计用户数量
 	router.GET("/count", UserCount)
