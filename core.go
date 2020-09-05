@@ -311,6 +311,8 @@ func Send(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	}
 	//内容 --> 敏感词过滤
 	message = filter.Replace(message, '*')
+	//内容 --> 字符编码
+	message = url.QueryEscape(message)
 
 	//检测发送次数是否达到上限 是则不允许再次发送
 	if u.Count > SendLimit {
@@ -340,75 +342,152 @@ func Send(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 		})
 	}
 
-	//检测推送类型 qq/wx
-	var pushType = r.URL.Query().Get("type")
-	if pushType == "wx" {
-		err := SendByWx(u.WxPusherUid, message)
-		if err != nil {
-			//转换失败 说明id有问题
-			ret, _ := json.Marshal(&Response{
-				Code:    StatusServerGeneralError,
-				Message: "微信推送异常:"+err.Error(),
-			})
-			Write(w, ret)
-			return
-		}
-		ret := &Response{
+	//发送地址
+	var port = GetPort(u.SendFrom)
+	var sendURL = conf.CQHttp + port + "/send_private_msg"
+
+	//发起推送
+	var pushRet = &struct {
+		RetCode int64  `json:"retcode"`
+		Status  string `json:"status"`
+	}{}
+	resp, err := http.Post(sendURL, "application/x-www-form-urlencoded", strings.NewReader("user_id="+u.SendTo+"&message="+message))
+	if err != nil {
+		body, _ := json.Marshal(&Response{
+			Code:    StatusServerNetworkError,
+			Message: "服务端网络异常,请稍后再试",
+		})
+		Write(w, body)
+		return
+	}
+	defer resp.Body.Close()
+	content, _ := ioutil.ReadAll(resp.Body)
+	_ = json.Unmarshal(content, pushRet)
+
+	var ret = new(Response)
+	if pushRet.RetCode == 0 {
+		ret = &Response{
 			Code:    StatusOk,
 			Message: "ok",
 			Data:    nil,
 		}
-		_t, _ := json.Marshal(ret)
-		Write(w, _t)
-	}else{
-		//内容 --> 字符编码
-		message = url.QueryEscape(message)
-
-		//发送地址
-		var port = GetPort(u.SendFrom)
-		var sendURL = conf.CQHttp + port + "/send_private_msg"
-
-		//发起推送
-		var pushRet = &struct {
-			RetCode int64  `json:"retcode"`
-			Status  string `json:"status"`
-		}{}
-		resp, err := http.Post(sendURL, "application/x-www-form-urlencoded", strings.NewReader("user_id="+u.SendTo+"&message="+message))
-		if err != nil {
-			body, _ := json.Marshal(&Response{
-				Code:    StatusServerNetworkError,
-				Message: "服务端网络异常,请稍后再试",
-			})
-			Write(w, body)
-			return
+	} else if pushRet.RetCode == 100 {
+		ret = &Response{
+			Code:    StatusClientError,
+			Message: pushRet.Status,
+			Data:    "推送异常,请从QQ列表删除机器人并重新添加好友关系",
 		}
-		defer resp.Body.Close()
-		content, _ := ioutil.ReadAll(resp.Body)
-		_ = json.Unmarshal(content, pushRet)
-
-		var ret = new(Response)
-		if pushRet.RetCode == 0 {
-			ret = &Response{
-				Code:    StatusOk,
-				Message: "ok",
-				Data:    nil,
-			}
-		} else if pushRet.RetCode == 100 {
-			ret = &Response{
-				Code:    StatusClientError,
-				Message: pushRet.Status,
-				Data:    "推送异常,请从QQ列表删除机器人并重新添加好友关系",
-			}
-		} else {
-			ret = &Response{
-				Code:    StatusClientError,
-				Message: pushRet.Status,
-				Data:    "推送异常",
-			}
+	} else {
+		ret = &Response{
+			Code:    StatusClientError,
+			Message: pushRet.Status,
+			Data:    "推送异常",
 		}
-		_t, _ := json.Marshal(ret)
-		Write(w, _t)
 	}
+	_t, _ := json.Marshal(ret)
+	Write(w, _t)
+}
+
+// WxSend 发起微信推送
+func WxSend(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	var message string
+	//优先GET 其次获取POST 再次获取POST-body
+	if r.URL.Query().Get("c") != "" {
+		message = r.URL.Query().Get("c")
+	} else if r.Method == "POST" {
+		message = r.PostFormValue("c")
+	}
+	//都为空? 尝试获取raw
+	if message == "" {
+		buf := make([]byte, RecvBuff)
+		n, _ := r.Body.Read(buf)
+		message = string(buf[:n])
+	}
+	//检测长度
+	rawContent := []rune(message)
+	if len(rawContent) > SendLength || len(rawContent) == 0 {
+		body, _ := json.Marshal(&Response{
+			Code:    StatusClientError,
+			Message: "文本超限或不能为空 推送失败",
+		})
+		Write(w, body)
+		return
+	}
+
+	u, _, err := SearchByKey(p.ByName("skey"))
+	if err != nil {
+		//失败 返回错误
+		body, _ := json.Marshal(&Response{
+			Code:    StatusServerGeneralError,
+			Message: err.Error(),
+		})
+		Write(w, body)
+		return
+	}
+	//检测是否绑定
+	if u.WxPusherUid == "" {
+		body, _ := json.Marshal(&Response{
+			Code:    StatusClientError,
+			Message: "用户未绑定推送微信公众号",
+		})
+		Write(w, body)
+		return
+	}
+
+	//内容 --> 敏感词检验
+	validate, _ := filter.Validate(message)
+	if !validate {
+		//文本不正常
+		u.Fouls++
+	}
+	//内容 --> 敏感词过滤
+	message = filter.Replace(message, '*')
+
+	//检测发送次数是否达到上限 是则不允许再次发送
+	if u.Count > SendLimit {
+		body, _ := json.Marshal(&Response{
+			Code:    StatusServerForbid,
+			Message: "当日推送数据已达到上限",
+		})
+		Write(w, body)
+		return
+	}
+	//更新count
+	zeroPoint, _ := time.ParseInLocation("2006-01-02",
+		time.Now().Format("2006-01-02"), time.Local) //zeroPoint是当日零点
+	if u != nil && zeroPoint.Unix() < u.LastSend {
+		//未到第二日 执行count++
+		_, _ = engine.ID(u.Id).Update(&User{
+			Count:    u.Count + 1,
+			Fouls:    u.Fouls,
+			LastSend: time.Now().Unix(),
+		})
+	} else if u != nil && zeroPoint.Unix() >= u.LastSend {
+		//到了第二日 重置count
+		_, _ = engine.ID(u.Id).Update(&User{
+			Count:    1,
+			Fouls:    u.Fouls,
+			LastSend: time.Now().Unix(),
+		})
+	}
+
+	err = SendByWx(u.WxPusherUid, message)
+	if err != nil {
+		//转换失败 说明id有问题
+		ret, _ := json.Marshal(&Response{
+			Code:    StatusServerGeneralError,
+			Message: "微信推送异常:"+err.Error(),
+		})
+		Write(w, ret)
+		return
+	}
+	ret := &Response{
+		Code:    StatusOk,
+		Message: "ok",
+		Data:    nil,
+	}
+	_t, _ := json.Marshal(ret)
+	Write(w, _t)
 }
 
 // GroupSend 发起推送
@@ -1314,6 +1393,8 @@ func Run() {
 	router.POST("/send/:skey", Send)
 	router.GET("/group/:skey", GroupSend)
 	router.POST("/group/:skey", GroupSend)
+	router.GET("/wx/:skey", WxSend)
+	router.POST("/wx/:skey", WxSend)
 
 	// 获得WxPusher二维码
 	router.GET("/qr_code", GenWxPusherQrCode)
