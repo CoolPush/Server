@@ -17,21 +17,21 @@ const (
 
 // User 用户表结构
 type User struct {
-	Id        int64  `json:"id" xorm:"pk autoincr"`                                        //id 数据库的记录id
-	Pid       int64  `json:"pid" xorm:"index"`                                             //platform_id 平台对应的id
-	Count     uint32 `json:"count" xorm:"default(0)"`                                      //用户使用统计
-	Fouls     uint32 `json:"fouls" xorm:"default(0)"`                                      //违规次数
-	LastSend  int64  `json:"lastSend" xorm:"default(0)"`                                   //上次发送时间
-	Oid       string `json:"oid" xorm:"varchar(32) index"`                                 //other_id 由字符串定义的用户信息
-	Skey      string `json:"skey" xorm:"varchar(32) notnull unique"`                       //发送关键钥  send_key
-	SendTo    string `json:"sendTo" xorm:"varchar(10) default('')"`                        //用户QQ
-	SendFrom  string `json:"sendFrom" xorm:"varchar(10) default('')"`                      //发送QQ
-	GroupTo   string `json:"groupTo" xorm:"varchar(10) default('')"`                       //用户群
-	GroupFrom string `json:"groupFrom" xorm:"varchar(10) default('')"`                     //群推送QQ机器人
-	WxPushUid string `json:"wxPushUid" xorm:"varchar(48)"`                                 //WxPush服务的uid
-	CreateAt  string `json:"createTime" xorm:"varchar(19) default('2020-06-01 00:00:00')"` //注册时间
-	LoginType string `json:"loginType" xorm:"varchar(16) default('github')"`               //授权登陆方式
-	Status    bool   `json:"status" xorm:"default(true)"`                                  //账户状态
+	Id          int64  `json:"id" xorm:"pk autoincr"`                                        //id 数据库的记录id
+	Pid         int64  `json:"pid" xorm:"index"`                                             //platform_id 平台对应的id
+	Count       uint32 `json:"count" xorm:"default(0)"`                                      //用户使用统计
+	Fouls       uint32 `json:"fouls" xorm:"default(0)"`                                      //违规次数
+	LastSend    int64  `json:"lastSend" xorm:"default(0)"`                                   //上次发送时间
+	Oid         string `json:"oid" xorm:"varchar(32) index"`                                 //other_id 由字符串定义的用户信息
+	Skey        string `json:"skey" xorm:"varchar(32) notnull unique"`                       //发送关键钥  send_key
+	SendTo      string `json:"sendTo" xorm:"varchar(10) default('')"`                        //用户QQ
+	SendFrom    string `json:"sendFrom" xorm:"varchar(10) default('')"`                      //发送QQ
+	GroupTo     string `json:"groupTo" xorm:"varchar(10) default('')"`                       //用户群
+	GroupFrom   string `json:"groupFrom" xorm:"varchar(10) default('')"`                     //群推送QQ机器人
+	WxPusherUid string `json:"wxPusherUid" xorm:"varchar(48)"`                               //WxPusher服务的uid
+	CreateAt    string `json:"createTime" xorm:"varchar(19) default('2020-06-01 00:00:00')"` //注册时间
+	LoginType   string `json:"loginType" xorm:"varchar(16) default('github')"`               //授权登陆方式
+	Status      bool   `json:"status" xorm:"default(true)"`                                  //账户状态
 }
 
 // PlatformUser 平台返回的用户数据

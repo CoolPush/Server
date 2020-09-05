@@ -345,7 +345,7 @@ func Send(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	//检测推送类型 qq/wx
 	var pushType = r.URL.Query().Get("type")
 	if pushType == "wx" {
-		err := SendByWx(u.WxPushUid, message)
+		err := SendByWx(u.WxPusherUid, message)
 		if err != nil {
 			//转换失败 说明id有问题
 			ret, _ := json.Marshal(&Response{
@@ -1205,7 +1205,7 @@ func WxPusherCallback(w http.ResponseWriter, r *http.Request, _ httprouter.Param
 		Write(w, ret)
 		return
 	}else {
-		u.WxPushUid = cb.Data.UID
+		u.WxPusherUid = cb.Data.UID
 		_, err = engine.Where("id = ?", id).Update(u)
 		if err != nil {
 			//转换失败 说明id有问题
