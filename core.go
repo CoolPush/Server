@@ -1319,7 +1319,7 @@ func Run() {
 	router.GET("/qr_code", GenWxPusherQrCode)
 
 	// WxPusher 回调
-	router.GET("/callback/wx_pusher", WxPusherCallback)
+	router.POST("/callback/wx_pusher", WxPusherCallback)
 
 	//统计用户数量
 	router.GET("/count", UserCount)
