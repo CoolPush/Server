@@ -1167,7 +1167,6 @@ func WxPusherCallback(w http.ResponseWriter, r *http.Request, _ httprouter.Param
 	n, _ := r.Body.Read(buf)
 	var cb WxPusherResponse
 	err := json.Unmarshal(buf[:n], &cb)
-	fmt.Println("get callback data:",cb)
 	if err != nil {
 		ret, _ := json.Marshal(&Response{
 			Code:    StatusClientError,
