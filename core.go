@@ -87,6 +87,9 @@ func CheckToken(tokenString string) (int64, error) {
 			return []byte(conf.Jwt.Skey), nil
 		})
 	//数据校验
+	if token == nil {
+		return 0, errors.New("请求非法")
+	}
 	if token.Valid {
 		if c, ok := token.Claims.(*CustomClaims); ok {
 			//检测
@@ -105,7 +108,7 @@ func CheckToken(tokenString string) (int64, error) {
 			return 0, errors.New("token已过期")
 		}
 	} else {
-		return 0, errors.New("无法处理该token: " + err.Error())
+		return 0, errors.New("无法处理该token")
 	}
 	return 0, errors.New("未知问题")
 }
@@ -702,8 +705,16 @@ func AuthGithub(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 			}
 			u, _, _ = SearchByPID(id, "github")
 		}
+		if u == nil {
+			body, _ := json.Marshal(&Response{
+				Code:    StatusServerGeneralError,
+				Message: "操作被禁止,请重新操作",
+			})
+			Write(w, body)
+			return
+		}
 		//TODO 找到了 检测用户状态
-		if u != nil && (!u.Status || u.Fouls >= FoulsNumber) {
+		if !u.Status || u.Fouls >= FoulsNumber {
 			//用户禁用
 			ret, _ := json.Marshal(&Response{
 				Code:    StatusServerForbid,
@@ -805,8 +816,16 @@ func AuthGitee(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 			}
 			u, _, _ = SearchByPID(user.PID, "gitee")
 		}
+		if u == nil {
+			body, _ := json.Marshal(&Response{
+				Code:    StatusServerGeneralError,
+				Message: "操作被禁止,请重新操作",
+			})
+			Write(w, body)
+			return
+		}
 		//TODO 找到了 检测用户状态
-		if u != nil && (!u.Status || u.Fouls >= FoulsNumber) {
+		if !u.Status || u.Fouls >= FoulsNumber {
 			//用户禁用
 			ret, _ := json.Marshal(&Response{
 				Code:    StatusServerForbid,
@@ -931,8 +950,16 @@ func AuthOSC(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 			}
 			u, _, _ = SearchByPID(user.PID, "osc")
 		}
+		if u == nil {
+			body, _ := json.Marshal(&Response{
+				Code:    StatusServerGeneralError,
+				Message: "操作被禁止,请重新操作",
+			})
+			Write(w, body)
+			return
+		}
 		//TODO 找到了 检测用户状态
-		if u != nil && (!u.Status || u.Fouls >= FoulsNumber) {
+		if !u.Status || u.Fouls >= FoulsNumber {
 			//用户禁用
 			ret, _ := json.Marshal(&Response{
 				Code:    StatusServerForbid,
@@ -1034,8 +1061,16 @@ func AuthQQ(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 			}
 			u, _, _ = SearchByOID(user.OpenID, "qq")
 		}
+		if u == nil {
+			body, _ := json.Marshal(&Response{
+				Code:    StatusServerGeneralError,
+				Message: "操作被禁止,请重新操作",
+			})
+			Write(w, body)
+			return
+		}
 		//TODO 找到了 检测用户状态
-		if u != nil && (!u.Status || u.Fouls >= FoulsNumber) {
+		if !u.Status || u.Fouls >= FoulsNumber {
 			//用户禁用
 			ret, _ := json.Marshal(&Response{
 				Code:    StatusServerForbid,
