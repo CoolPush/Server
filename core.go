@@ -1486,11 +1486,13 @@ func EmailSend(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 		)
 		//存在多个发送邮箱 每次随机选择一个发送
 		var randT int64
-		if len(conf.EmailList) >=2 {
+		if len(conf.EmailList) >= 2 {
 			randT = time.Now().Unix() % int64(len(conf.EmailList))
-		}else {
+		} else {
 			randT = 0
 		}
+
+		fmt.Println("this email config: ", conf.EmailList[randT])
 
 		message.SetAddressHeader("From", conf.EmailList[randT].Username, "Worker")
 		message.SetHeader("To", address)
