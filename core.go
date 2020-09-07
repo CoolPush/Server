@@ -1238,6 +1238,64 @@ func GroupBind(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	return
 }
 
+// EmailBind 邮箱绑定
+func EmailBind(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	//先检验token
+	tokenString := r.Header.Get("token")
+	if _, err := CheckToken(tokenString); err != nil {
+		ret, _ := json.Marshal(&Response{
+			Code:    StatusServerAuthError,
+			Message: err.Error(),
+		})
+		Write(w, ret)
+		return
+	}
+	//绑定qq
+	idString := r.URL.Query().Get("id")
+	id, err := strconv.ParseInt(idString, 10, 64)
+	if err != nil {
+		//转换失败 说明id有问题
+		ret, _ := json.Marshal(&Response{
+			Code:    StatusServerAuthError,
+			Message: "用户身份无法确定",
+		})
+		Write(w, ret)
+		return
+	}
+	email := r.URL.Query().Get("email")
+	var user = &User{
+		Id:       id,
+		Email: email,
+	}
+
+	//检测用户是否存在
+	if _, exist, _ := SearchByID(id); !exist {
+		ret, _ := json.Marshal(&Response{
+			Code:    StatusServerAuthError,
+			Message: "用户不存在,非法操作",
+		})
+		Write(w, ret)
+		return
+	} else {
+		_, err = engine.Where("id = ?", id).Update(user)
+		if err != nil {
+			//转换失败 说明id有问题
+			ret, _ := json.Marshal(&Response{
+				Code:    StatusServerAuthError,
+				Message: "绑定失败",
+			})
+			Write(w, ret)
+			return
+		}
+	}
+	ret, _ := json.Marshal(&Response{
+		Code:    StatusOk,
+		Message: "绑定成功",
+	})
+	Write(w, ret)
+	return
+}
+
 // UserCount 统计用户数目
 func UserCount(w http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
 	count, err := engine.Table(&User{}).Count()
@@ -1396,13 +1454,32 @@ func EmailSend(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 		message = r.URL.Query().Get("c")
 		title = r.URL.Query().Get("t")
 	} else if r.Method == "POST" {
-		message = r.PostFormValue("c")
+		title = r.Form.Get("t")
+		message = r.Form.Get("c")
 	}
 	//都为空? 尝试获取raw
-	if message == "" {
-		buf := make([]byte, RecvBuff)
-		n, _ := r.Body.Read(buf)
-		message = string(buf[:n])
+	if title == "" || message == "" {
+		var params map[string]string
+		decoder := json.NewDecoder(r.Body)
+		err := decoder.Decode(&params)
+		if err != nil {
+			body, _ := json.Marshal(&Response{
+				Code:    StatusClientError,
+				Message: "参数格式错误,推送失败",
+			})
+			Write(w, body)
+			return
+		}
+		title = params["t"]
+		message = params["c"]
+	}
+	if title == "" || message == "" {
+		body, _ := json.Marshal(&Response{
+			Code:    StatusClientError,
+			Message: "参数缺失,推送失败",
+		})
+		Write(w, body)
+		return
 	}
 	//检测长度
 	rawContent := []rune(message)
@@ -1646,6 +1723,7 @@ func Run() {
 	// qq绑定
 	router.GET("/bind", Bind)
 	router.GET("/group_bind", GroupBind)
+	router.GET("/email_bind", EmailBind)
 
 	// 检测敏感词
 	router.GET("/filter", MessageFilterAll)
