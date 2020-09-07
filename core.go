@@ -23,6 +23,8 @@ import (
 
 	"github.com/wxpusher/wxpusher-sdk-go"
 	wxModel "github.com/wxpusher/wxpusher-sdk-go/model"
+
+	"gopkg.in/gomail.v2"
 )
 
 // NewUserByPid 通过平台返回的Pid注册新用户
@@ -474,7 +476,22 @@ func WxSend(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 		})
 	}
 
-	err = SendByWx(u.WxPusherUid, message)
+	var send = func(wxUid,content string) error {
+		if wxUid == "" {
+			return errors.New("未绑定微信")
+		}
+		if content == "" {
+			return errors.New("推送内容不能为空")
+		}
+
+		msg := wxModel.NewMessage(conf.WxPusherToken).SetContent(content).AddUId(wxUid)
+		_, err := wxpusher.SendMessage(msg)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	err = send(u.WxPusherUid, message)
 	if err != nil {
 		//转换失败 说明id有问题
 		ret, _ := json.Marshal(&Response{
@@ -1371,20 +1388,247 @@ func GenWxPusherQrCode(w http.ResponseWriter, r *http.Request, _ httprouter.Para
 	Write(w, body)
 }
 
-func SendByWx(wxUid, content string) error {
-	if wxUid == "" {
-		return errors.New("未绑定微信")
+// EmailSend 邮箱推送
+func EmailSend(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	var message,title string
+	//优先GET 其次获取POST 再次获取POST-body
+	if r.URL.Query().Get("c") != "" && r.URL.Query().Get("t") != "" {
+		message = r.URL.Query().Get("c")
+		title = r.URL.Query().Get("t")
+	} else if r.Method == "POST" {
+		message = r.PostFormValue("c")
 	}
-	if content == "" {
-		return errors.New("推送内容不能为空")
+	//都为空? 尝试获取raw
+	if message == "" {
+		buf := make([]byte, RecvBuff)
+		n, _ := r.Body.Read(buf)
+		message = string(buf[:n])
+	}
+	//检测长度
+	rawContent := []rune(message)
+	if len(rawContent) > SendLength || len(rawContent) == 0 {
+		body, _ := json.Marshal(&Response{
+			Code:    StatusClientError,
+			Message: "文本超限或不能为空 推送失败",
+		})
+		Write(w, body)
+		return
 	}
 
-	msg := wxModel.NewMessage(conf.WxPusherToken).SetContent(content).AddUId(wxUid)
-	_, err := wxpusher.SendMessage(msg)
+	u, _, err := SearchByKey(p.ByName("skey"))
 	if err != nil {
-		return err
+		//失败 返回错误
+		body, _ := json.Marshal(&Response{
+			Code:    StatusServerGeneralError,
+			Message: err.Error(),
+		})
+		Write(w, body)
+		return
 	}
-	return nil
+	//检测是否绑定
+	if u.SendFrom == "" || u.SendTo == "" {
+		body, _ := json.Marshal(&Response{
+			Code:    StatusClientError,
+			Message: "用户未绑定推送QQ或用户未指定被推送QQ地址",
+		})
+		Write(w, body)
+		return
+	}
+
+	//内容 --> 敏感词检验
+	titleValidate, _ := filter.Validate(title)
+	messageValidate, _ := filter.Validate(message)
+	if !titleValidate {
+		//文本不正常
+		u.Fouls++
+	}
+	if !messageValidate {
+		//文本不正常
+		u.Fouls++
+	}
+	//内容 --> 敏感词过滤
+	title = filter.Replace(title, '*')
+	message = filter.Replace(message, '*')
+
+	//检测发送次数是否达到上限 是则不允许再次发送
+	if u.Count > SendLimit {
+		body, _ := json.Marshal(&Response{
+			Code:    StatusServerForbid,
+			Message: "当日推送数据已达到上限",
+		})
+		Write(w, body)
+		return
+	}
+	//更新count
+	zeroPoint, _ := time.ParseInLocation("2006-01-02",
+		time.Now().Format("2006-01-02"), time.Local) //zeroPoint是当日零点
+	if u != nil && zeroPoint.Unix() < u.LastSend {
+		//未到第二日 执行count++
+		_, _ = engine.ID(u.Id).Update(&User{
+			Count:    u.Count + 1,
+			Fouls:    u.Fouls,
+			LastSend: time.Now().Unix(),
+		})
+	} else if u != nil && zeroPoint.Unix() >= u.LastSend {
+		//到了第二日 重置count
+		_, _ = engine.ID(u.Id).Update(&User{
+			Count:    1,
+			Fouls:    u.Fouls,
+			LastSend: time.Now().Unix(),
+		})
+	}
+
+	// 推送
+	var send = func (address, subject, content string) error {
+		var (
+		message = gomail.NewMessage()
+		mail    *gomail.Dialer
+		from    string
+	)
+		//存在多个发送邮箱 每次随机选择一个发送
+		var randT = time.Now().Unix() % 7
+		if randT == 0 {
+		mail = gomail.NewDialer("smtp.yeah.net", 465, "xuthus5@yeah.net", "ZWJQRFdkM1B0a3li")
+		from = "xuthus5@yeah.net"
+	} else if randT == 1 {
+		mail = gomail.NewDialer("smtp.189.cn", 465, "xuthus5@189.cn", "J0710cz5")
+		from = "xuthus5@189.cn"
+	} else if randT == 2 {
+		mail = gomail.NewDialer("smtp.21cn.com", 465, "xuthus5@21cn.com", "J0710cz5")
+		from = "xuthus5@21cn.com"
+	} else if randT == 3 {
+		mail = gomail.NewDialer("smtp.sohu.com", 25, "ppag1591f969dd02@sohu.com", "J7F0UY9RDK6CTB")
+		from = "ppag1591f969dd02@sohu.com"
+	} else if randT == 4 {
+		mail = gomail.NewDialer("smtp.office365.com", 587, "xuthus5@outlook.com", "J0710cz5")
+		from = "xuthus5@outlook.com"
+	} else if randT == 6 {
+		mail = gomail.NewDialer("smtp.sina.cn", 465, "xuthus5@sina.cn", "686377ed5ad0f5a6")
+		from = "xuthus5@sina.cn"
+	} else {
+		mail = gomail.NewDialer("smtp.qq.com", 465, "xuthus5@foxmail.com", "xbqdsfgeoiyzghdh")
+		from = "xuthus5@foxmail.com"
+	}
+
+		message.SetAddressHeader("From", from, "Worker")
+		message.SetHeader("To", address)
+		message.SetHeader("Subject", subject)
+
+		var template = `
+<div
+  style="
+    border-radius: 10px 10px 10px 10px;
+    font-size: 13px;
+    color: #555555;
+    width: 666px;
+    font-family: 'Century Gothic', 'Trebuchet MS', 'Hiragino Sans GB', 微软雅黑,
+      'Microsoft Yahei', Tahoma, Helvetica, Arial, 'SimSun', sans-serif;
+    margin: 50px auto;
+    border: 1px solid #eee;
+    max-width: 100%;
+    background: #ffffff
+      repeating-linear-gradient(
+        -45deg,
+        #fff,
+        #fff 1.125rem,
+        transparent 1.125rem,
+        transparent 2.25rem
+      );
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.15);
+  "
+>
+  <div
+    style="
+      width: 100%;
+      background: #49bdad;
+      color: #ffffff;
+      border-radius: 10px 10px 0 0;
+      background-image: -moz-linear-gradient(
+        0deg,
+        rgb(67, 198, 184),
+        rgb(255, 209, 244)
+      );
+      background-image: -webkit-linear-gradient(
+        0deg,
+        rgb(67, 198, 184),
+        rgb(255, 209, 244)
+      );
+      height: 66px;
+    "
+  >
+    <p
+      style="
+        font-size: 15px;
+        word-break: break-all;
+        padding: 23px 32px;
+        margin: 0;
+        background-color: hsla(0, 0%, 100%, 0.4);
+        border-radius: 10px 10px 0 0;
+      "
+    >
+      `+ subject +`
+    </p>
+  </div>
+  <div style="margin: 40px auto; width: 90%;">
+    <div
+      style="
+        background: #fafafa
+          repeating-linear-gradient(
+            -45deg,
+            #fff,
+            #fff 1.125rem,
+            transparent 1.125rem,
+            transparent 2.25rem
+          );
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+        margin: 20px 0px;
+        padding: 15px;
+        border-radius: 5px;
+        font-size: 14px;
+        color: #555555;
+      "
+    >` +
+		content +
+	`
+    </div>
+    <style type="text/css">
+      a:link {
+        text-decoration: none;
+      }
+      a:visited {
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: none;
+      }
+      a:active {
+        text-decoration: none;
+      }
+    </style>
+  </div>
+</div>
+`
+		message.SetBody("text/html", template)
+		return mail.DialAndSend(message)
+	}
+
+	//发起推送
+	err = send(u.Email,title,message)
+	if err != nil {
+		body, _ := json.Marshal(&Response{
+			Code:    StatusServerGeneralError,
+			Message: "邮箱推送异常:"+err.Error(),
+		})
+		Write(w, body)
+		return
+	}
+	ret := &Response{
+		Code:    StatusOk,
+		Message: "ok",
+		Data:    nil,
+	}
+	_t, _ := json.Marshal(ret)
+	Write(w, _t)
 }
 
 // Run 路由入口
@@ -1430,6 +1674,8 @@ func Run() {
 	router.POST("/group/:skey", GroupSend)
 	router.GET("/wx/:skey", WxSend)
 	router.POST("/wx/:skey", WxSend)
+	router.GET("/email/:skey", EmailSend)
+	router.POST("/email/:skey", EmailSend)
 
 	// 获得WxPusher二维码
 	router.GET("/qr_code", GenWxPusherQrCode)
