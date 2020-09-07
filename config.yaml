@@ -43,4 +43,11 @@ environments:
     723860385: :5701
     228346469: :5702
     1498598914: :5703
+  # 微信推送token
   wxpusher_token: AT_RdjijWgwRmOyetqMN6STacLKXcDWSRxp
+  # 可用的邮箱列表
+  email_list:
+    - host: smtp.sina.cn
+      port: 465
+      username: xuthus5@sina.cn
+      password: 686377ed5ad0f5a6

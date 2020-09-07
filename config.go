@@ -23,6 +23,7 @@ type Environments struct {
 	CQHttp        string            `yaml:"cqhttp"`         //cqhttp服务地址
 	Robots        map[string]string `yaml:"robots"`         //机器人列表
 	WxPusherToken string            `yaml:"wxpusher_token"` //wxpusher 应用token
+	EmailList     []Email           `yaml:"email_list"`     //邮箱列表
 }
 
 // HTTPS 配置
@@ -64,6 +65,14 @@ type JWT struct {
 	Issuer  string `yaml:"issuer"`
 	Subject string `yaml:"subject"`
 	Expires int64  `yaml:"expires"`
+}
+
+// Email 邮箱配置
+type Email struct {
+	Host     string `yaml:"host"`
+	Port     int    `yaml:"port"`
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
 }
 
 // conf 是一个全局的配置信息实例 项目运行只读取一次 是一个单例

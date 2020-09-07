@@ -476,7 +476,7 @@ func WxSend(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 		})
 	}
 
-	var send = func(wxUid,content string) error {
+	var send = func(wxUid, content string) error {
 		if wxUid == "" {
 			return errors.New("未绑定微信")
 		}
@@ -496,7 +496,7 @@ func WxSend(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 		//转换失败 说明id有问题
 		ret, _ := json.Marshal(&Response{
 			Code:    StatusServerGeneralError,
-			Message: "微信推送异常:"+err.Error(),
+			Message: "微信推送异常:" + err.Error(),
 		})
 		Write(w, ret)
 		return
@@ -1318,7 +1318,7 @@ func WxPusherCallback(w http.ResponseWriter, r *http.Request, _ httprouter.Param
 		return
 	}
 
-	id,err := strconv.ParseInt(cb.Data.Extra,10,64)
+	id, err := strconv.ParseInt(cb.Data.Extra, 10, 64)
 	if err != nil {
 		ret, _ := json.Marshal(&Response{
 			Code:    StatusClientError,
@@ -1328,14 +1328,14 @@ func WxPusherCallback(w http.ResponseWriter, r *http.Request, _ httprouter.Param
 		Write(w, ret)
 		return
 	}
-	if u,exist,_ := SearchByID(id); !exist {
+	if u, exist, _ := SearchByID(id); !exist {
 		ret, _ := json.Marshal(&Response{
 			Code:    StatusServerAuthError,
 			Message: "用户不存在,非法操作",
 		})
 		Write(w, ret)
 		return
-	}else {
+	} else {
 		u.WxPusherUid = cb.Data.UID
 		_, err = engine.Where("id = ?", id).Update(u)
 		if err != nil {
@@ -1390,7 +1390,7 @@ func GenWxPusherQrCode(w http.ResponseWriter, r *http.Request, _ httprouter.Para
 
 // EmailSend 邮箱推送
 func EmailSend(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	var message,title string
+	var message, title string
 	//优先GET 其次获取POST 再次获取POST-body
 	if r.URL.Query().Get("c") != "" && r.URL.Query().Get("t") != "" {
 		message = r.URL.Query().Get("c")
@@ -1479,38 +1479,20 @@ func EmailSend(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	}
 
 	// 推送
-	var send = func (address, subject, content string) error {
+	var send = func(address, subject, content string) error {
 		var (
-		message = gomail.NewMessage()
-		mail    *gomail.Dialer
-		from    string
-	)
+			message = gomail.NewMessage()
+			mail    *gomail.Dialer
+		)
 		//存在多个发送邮箱 每次随机选择一个发送
-		var randT = time.Now().Unix() % 7
-		if randT == 0 {
-		mail = gomail.NewDialer("smtp.yeah.net", 465, "xuthus5@yeah.net", "ZWJQRFdkM1B0a3li")
-		from = "xuthus5@yeah.net"
-	} else if randT == 1 {
-		mail = gomail.NewDialer("smtp.189.cn", 465, "xuthus5@189.cn", "J0710cz5")
-		from = "xuthus5@189.cn"
-	} else if randT == 2 {
-		mail = gomail.NewDialer("smtp.21cn.com", 465, "xuthus5@21cn.com", "J0710cz5")
-		from = "xuthus5@21cn.com"
-	} else if randT == 3 {
-		mail = gomail.NewDialer("smtp.sohu.com", 25, "ppag1591f969dd02@sohu.com", "J7F0UY9RDK6CTB")
-		from = "ppag1591f969dd02@sohu.com"
-	} else if randT == 4 {
-		mail = gomail.NewDialer("smtp.office365.com", 587, "xuthus5@outlook.com", "J0710cz5")
-		from = "xuthus5@outlook.com"
-	} else if randT == 6 {
-		mail = gomail.NewDialer("smtp.sina.cn", 465, "xuthus5@sina.cn", "686377ed5ad0f5a6")
-		from = "xuthus5@sina.cn"
-	} else {
-		mail = gomail.NewDialer("smtp.qq.com", 465, "xuthus5@foxmail.com", "xbqdsfgeoiyzghdh")
-		from = "xuthus5@foxmail.com"
-	}
+		var randT int64
+		if len(conf.EmailList) >=2 {
+			randT = time.Now().Unix() % int64(len(conf.EmailList))
+		}else {
+			randT = 0
+		}
 
-		message.SetAddressHeader("From", from, "Worker")
+		message.SetAddressHeader("From", conf.EmailList[randT].Username, "Worker")
 		message.SetHeader("To", address)
 		message.SetHeader("Subject", subject)
 
@@ -1566,7 +1548,7 @@ func EmailSend(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
         border-radius: 10px 10px 0 0;
       "
     >
-      `+ subject +`
+      ` + subject + `
     </p>
   </div>
   <div style="margin: 40px auto; width: 90%;">
@@ -1588,8 +1570,8 @@ func EmailSend(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
         color: #555555;
       "
     >` +
-		content +
-	`
+			content +
+			`
     </div>
     <style type="text/css">
       a:link {
@@ -1613,11 +1595,11 @@ func EmailSend(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	}
 
 	//发起推送
-	err = send(u.Email,title,message)
+	err = send(u.Email, title, message)
 	if err != nil {
 		body, _ := json.Marshal(&Response{
 			Code:    StatusServerGeneralError,
-			Message: "邮箱推送异常:"+err.Error(),
+			Message: "邮箱推送异常:" + err.Error(),
 		})
 		Write(w, body)
 		return
