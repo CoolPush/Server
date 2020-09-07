@@ -1492,8 +1492,8 @@ func EmailSend(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 			randT = 0
 		}
 
-		fmt.Println("this email config: ", conf.EmailList[randT])
-
+		e := conf.EmailList[randT]
+		mail = gomail.NewDialer(e.Host, e.Port, e.Username, e.Password)
 		message.SetAddressHeader("From", conf.EmailList[randT].Username, "Worker")
 		message.SetHeader("To", address)
 		message.SetHeader("Subject", subject)
