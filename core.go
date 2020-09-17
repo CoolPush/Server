@@ -321,17 +321,17 @@ func Send(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	var reImage = regexp.MustCompile(CQImage)
 	find := reImage.FindAllStringSubmatch(message,-1)
 	for _, v := range find {
-		message = strings.ReplaceAll(message, v[0], `[CQ:image, file=` + v[1] + `]`)
+		message = strings.ReplaceAll(message, v[0], `[CQ:image,file=` + v[1] + `]`)
 	}
 	var reAt = regexp.MustCompile(CQAt)
 	find = reAt.FindAllStringSubmatch(message,-1)
 	for _, v := range find {
-		message = strings.ReplaceAll(message, v[0], `[CQ:at, qq=` + v[1] + `]`)
+		message = strings.ReplaceAll(message, v[0], `[CQ:at,qq=` + v[1] + `]`)
 	}
 	var reFace = regexp.MustCompile(CQFace)
 	find = reFace.FindAllStringSubmatch(message,-1)
 	for _, v := range find {
-		message = strings.ReplaceAll(message, v[0], `[CQ:face, id=` + v[1] + `]`)
+		message = strings.ReplaceAll(message, v[0], `[CQ:face,id=` + v[1] + `]`)
 	}
 	//内容 --> 字符编码
 	message = url.QueryEscape(message)
@@ -585,17 +585,17 @@ func GroupSend(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	var reImage = regexp.MustCompile(CQImage)
 	find := reImage.FindAllStringSubmatch(message,-1)
 	for _, v := range find {
-		message = strings.ReplaceAll(message, v[0], `[CQ:image, file=` + v[1] + `]`)
+		message = strings.ReplaceAll(message, v[0], `[CQ:image,file=` + v[1] + `]`)
 	}
 	var reAt = regexp.MustCompile(CQAt)
 	find = reAt.FindAllStringSubmatch(message,-1)
 	for _, v := range find {
-		message = strings.ReplaceAll(message, v[0], `[CQ:at, qq=` + v[1] + `]`)
+		message = strings.ReplaceAll(message, v[0], `[CQ:at,qq=` + v[1] + `]`)
 	}
 	var reFace = regexp.MustCompile(CQFace)
 	find = reFace.FindAllStringSubmatch(message,-1)
 	for _, v := range find {
-		message = strings.ReplaceAll(message, v[0], `[CQ:face, id=` + v[1] + `]`)
+		message = strings.ReplaceAll(message, v[0], `[CQ:face,id=` + v[1] + `]`)
 	}
 	//内容 --> 字符编码
 	message = url.QueryEscape(message)
