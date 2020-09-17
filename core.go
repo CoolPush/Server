@@ -11,6 +11,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -316,6 +317,22 @@ func Send(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	}
 	//内容 --> 敏感词过滤
 	message = filter.Replace(message, '*')
+	//CQ码转换
+	var reImage = regexp.MustCompile(CQImage)
+	find := reImage.FindAllStringSubmatch(message,-1)
+	for _, v := range find {
+		message = strings.ReplaceAll(message, v[0], `[CQ:image, file=` + v[1] + `]`)
+	}
+	var reAt = regexp.MustCompile(CQAt)
+	find = reAt.FindAllStringSubmatch(message,-1)
+	for _, v := range find {
+		message = strings.ReplaceAll(message, v[0], `[CQ:at, qq=` + v[1] + `]`)
+	}
+	var reFace = regexp.MustCompile(CQFace)
+	find = reFace.FindAllStringSubmatch(message,-1)
+	for _, v := range find {
+		message = strings.ReplaceAll(message, v[0], `[CQ:face, id=` + v[1] + `]`)
+	}
 	//内容 --> 字符编码
 	message = url.QueryEscape(message)
 
@@ -564,6 +581,22 @@ func GroupSend(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	}
 	//内容 --> 敏感词过滤
 	message = filter.Replace(message, '*')
+	//CQ码转换
+	var reImage = regexp.MustCompile(CQImage)
+	find := reImage.FindAllStringSubmatch(message,-1)
+	for _, v := range find {
+		message = strings.ReplaceAll(message, v[0], `[CQ:image, file=` + v[1] + `]`)
+	}
+	var reAt = regexp.MustCompile(CQAt)
+	find = reAt.FindAllStringSubmatch(message,-1)
+	for _, v := range find {
+		message = strings.ReplaceAll(message, v[0], `[CQ:at, qq=` + v[1] + `]`)
+	}
+	var reFace = regexp.MustCompile(CQFace)
+	find = reFace.FindAllStringSubmatch(message,-1)
+	for _, v := range find {
+		message = strings.ReplaceAll(message, v[0], `[CQ:face, id=` + v[1] + `]`)
+	}
 	//内容 --> 字符编码
 	message = url.QueryEscape(message)
 
@@ -730,7 +763,6 @@ func AuthGithub(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 			Write(w, body)
 			return
 		}
-		//TODO 找到了 检测用户状态
 		if !u.Status || u.Fouls >= FoulsNumber {
 			//用户禁用
 			ret, _ := json.Marshal(&Response{
@@ -841,7 +873,6 @@ func AuthGitee(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 			Write(w, body)
 			return
 		}
-		//TODO 找到了 检测用户状态
 		if !u.Status || u.Fouls >= FoulsNumber {
 			//用户禁用
 			ret, _ := json.Marshal(&Response{
@@ -975,7 +1006,6 @@ func AuthOSC(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 			Write(w, body)
 			return
 		}
-		//TODO 找到了 检测用户状态
 		if !u.Status || u.Fouls >= FoulsNumber {
 			//用户禁用
 			ret, _ := json.Marshal(&Response{
@@ -1086,7 +1116,6 @@ func AuthQQ(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 			Write(w, body)
 			return
 		}
-		//TODO 找到了 检测用户状态
 		if !u.Status || u.Fouls >= FoulsNumber {
 			//用户禁用
 			ret, _ := json.Marshal(&Response{

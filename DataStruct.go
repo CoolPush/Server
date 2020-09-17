@@ -15,6 +15,12 @@ const (
 	StatusServerForbid       = 503   //服务端禁止了操作
 )
 
+const (
+	CQImage = "@image=(.*?)@"
+	CQAt = "@at=(.*?)@"
+	CQFace = "@face=(.*?)@"
+)
+
 // User 用户表结构
 type User struct {
 	Id          int64  `json:"id" xorm:"pk autoincr"`                                        //id 数据库的记录id
