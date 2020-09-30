@@ -1443,6 +1443,54 @@ func WxPusherCallback(w http.ResponseWriter, r *http.Request, _ httprouter.Param
 	return
 }
 
+func CancelWxPusher(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	//先检验token
+	tokenString := r.Header.Get("token")
+	if _, err := CheckToken(tokenString); err != nil {
+		ret, _ := json.Marshal(&Response{
+			Code:    StatusServerAuthError,
+			Message: err.Error(),
+		})
+		Write(w, ret)
+		return
+	}
+	idString := r.URL.Query().Get("id")
+	id, err := strconv.ParseInt(idString, 10, 64)
+	if err != nil {
+		//转换失败 说明id有问题
+		ret, _ := json.Marshal(&Response{
+			Code:    StatusServerAuthError,
+			Message: "用户身份无法确定",
+		})
+		Write(w, ret)
+		return
+	}
+	//检测用户是否存在
+	var user = &User{
+		Id:       id,
+		WxPusherUid: "",
+	}
+	if _, exist, _ := SearchByID(id); !exist {
+		ret, _ := json.Marshal(&Response{
+			Code:    StatusServerAuthError,
+			Message: "用户不存在,非法操作",
+		})
+		Write(w, ret)
+		return
+	} else {
+		_, err = engine.Where("id = ?", id).Cols("wx_pusher_uid").Update(user)
+		if err != nil {
+			//转换失败 说明id有问题
+			ret, _ := json.Marshal(&Response{
+				Code:    StatusServerAuthError,
+				Message: "取消绑定失败",
+			})
+			Write(w, ret)
+			return
+		}
+	}
+}
+
 // GenWxPusherQrCode 生成绑定WxPusher 的二维码
 func GenWxPusherQrCode(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	//先检验token
@@ -1770,6 +1818,8 @@ func Run() {
 
 	// 获得WxPusher二维码
 	router.GET("/qr_code", GenWxPusherQrCode)
+	// 取消微信授权
+	router.GET("/cancel_wx_pusher", CancelWxPusher)
 
 	// WxPusher 回调
 	router.POST("/callback/wx_pusher", WxPusherCallback)
