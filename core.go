@@ -333,6 +333,11 @@ func Send(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	for _, v := range find {
 		message = strings.ReplaceAll(message, v[0], `[CQ:face,id=` + v[1] + `]`)
 	}
+	var reMusic = regexp.MustCompile(CQMusic)
+	find = reMusic.FindAllStringSubmatch(message,-1)
+	for _, v := range find {
+		message = strings.ReplaceAll(message, v[0], `[CQ:music,` + v[1] + `]`)
+	}
 	//内容 --> 字符编码
 	message = url.QueryEscape(message)
 

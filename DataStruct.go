@@ -19,6 +19,7 @@ const (
 	CQImage = "@image=(.*?)@"
 	CQAt = "@at=(.*?)@"
 	CQFace = "@face=(.*?)@"
+	CQMusic = "@music=\\[(.*?)\\]@"
 )
 
 // User 用户表结构
