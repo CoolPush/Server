@@ -1499,6 +1499,12 @@ func CancelWxPusher(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 			return
 		}
 	}
+	ret, _ := json.Marshal(&Response{
+		Code:    StatusOk,
+		Message: "取消关注成功",
+	})
+	Write(w, ret)
+	return
 }
 
 // GenWxPusherQrCode 生成绑定WxPusher 的二维码
@@ -1828,6 +1834,7 @@ func Run() {
 
 	// 获得WxPusher二维码
 	router.GET("/qr_code", GenWxPusherQrCode)
+
 	// 取消微信授权
 	router.GET("/cancel_wx_pusher", CancelWxPusher)
 
