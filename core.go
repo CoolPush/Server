@@ -144,6 +144,12 @@ func SearchByOID(oid string, loginType string) (*User, bool, error) {
 	return u, exist, err
 }
 
+func SearchByQQ(qq string) ([]*User, error) {
+	var list []*User
+	err := engine.Where("send_to = ?", qq).Find(&list)
+	return list,err
+}
+
 // Write 输出返回结果
 func Write(w http.ResponseWriter, response []byte) {
 	//公共的响应头设置
@@ -1785,6 +1791,66 @@ func EmailSend(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	Write(w, _t)
 }
 
+// GetUserInfo 获取用户信息
+func GetUserInfo(w http.ResponseWriter, r *http.Request, _ httprouter.Params)  {
+	var qq = r.URL.Query().Get("qq")
+	var skey = r.URL.Query().Get("skey")
+
+	if qq == "" && skey == "" {
+		ret := &Response{
+			Code:    StatusClientError,
+			Message: "参数无效",
+			Data:    nil,
+		}
+		_t, _ := json.Marshal(ret)
+		Write(w, _t)
+	}
+
+	if skey != "" {
+		u, exist, _ := SearchByKey(skey)
+		if !exist {
+			ret, _ := json.Marshal(&Response{
+				Code:    StatusClientError,
+				Message: "skey不存在",
+			})
+			Write(w, ret)
+			return
+		}
+
+		ret, _ := json.Marshal(&Response{
+			Code:    StatusOk,
+			Message: "",
+			Data: u,
+		})
+		Write(w, ret)
+		return
+	}
+
+	if qq != "" {
+		list, err := SearchByQQ(qq)
+		if err != nil {
+			ret := &Response{
+				Code:    StatusServerGeneralError,
+				Message: err.Error(),
+				Data:    err,
+			}
+			_t, _ := json.Marshal(ret)
+			Write(w, _t)
+			return
+		}
+
+		ret, _ := json.Marshal(&Response{
+			Code:    StatusOk,
+			Message: "",
+			Data: list,
+		})
+		Write(w, ret)
+		return
+	}
+
+	return
+}
+
 // Run 路由入口
 func Run() {
 	fmt.Println("程序启动:" + conf.ProjectName)
@@ -1846,6 +1912,9 @@ func Run() {
 
 	//恢复用户状态
 	router.GET("/resume", Resume)
+
+	// 获取用户信息
+	router.GET("/user", GetUserInfo)
 
 	// 主页
 	//router.NotFound = http.FileServer(http.Dir("dist"))
