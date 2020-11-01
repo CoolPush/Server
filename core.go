@@ -1799,7 +1799,7 @@ func GetUserInfo(w http.ResponseWriter, r *http.Request, _ httprouter.Params)  {
 	if qq == "" && skey == "" {
 		ret := &Response{
 			Code:    StatusClientError,
-			Message: "参数无效",
+			Message: "参数缺失",
 			Data:    nil,
 		}
 		_t, _ := json.Marshal(ret)
