@@ -653,6 +653,7 @@ func GroupSend(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 		RetCode int64  `json:"retcode"`
 		Status  string `json:"status"`
 	}{}
+	fmt.Printf("get content: %v", "group_id="+u.GroupTo+"&message="+message )
 	resp, err := http.Post(sendURL, "application/x-www-form-urlencoded", strings.NewReader("group_id="+u.GroupTo+"&message="+message))
 	if err != nil {
 		body, _ := json.Marshal(&Response{
@@ -665,6 +666,7 @@ func GroupSend(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	defer resp.Body.Close()
 	content, _ := ioutil.ReadAll(resp.Body)
 	_ = json.Unmarshal(content, pushRet)
+	fmt.Printf("get result: %v", pushRet)
 
 	var ret = new(Response)
 	if pushRet.RetCode == 0 {
