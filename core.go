@@ -665,7 +665,6 @@ func GroupSend(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	defer resp.Body.Close()
 	content, _ := ioutil.ReadAll(resp.Body)
 	_ = json.Unmarshal(content, pushRet)
-	log.Printf("get pushRet: %v \n", pushRet)
 	var ret = new(Response)
 	if pushRet.RetCode == 0 {
 		ret = &Response{
