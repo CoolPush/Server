@@ -615,7 +615,7 @@ func GroupSend(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 		message = strings.ReplaceAll(message, v[0], `[CQ:music,` + v[1] + `]`)
 	}
 	//内容 --> 字符编码
-	message = url.QueryEscape(message)
+	//message = url.QueryEscape(message)
 
 	//检测发送次数是否达到上限 是则不允许再次发送
 	if u.Count > SendLimit {
