@@ -655,7 +655,7 @@ func GroupSend(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 		Status  string `json:"status"`
 	}{}
 
-	var ct = `{"group_id": ` +u.GroupTo + `, "message": "` + message + `"}`
+	var ct = `{"auto_escape": true, "group_id": ` +u.GroupTo + `, "message": "` + message + `"}`
 
 	log.Printf("get ct: %v \n", ct)
 	var jsonstr = []byte(ct)
