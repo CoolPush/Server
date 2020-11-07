@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -654,24 +653,7 @@ func GroupSend(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 		RetCode int64  `json:"retcode"`
 		Status  string `json:"status"`
 	}{}
-
-	var ct = `{"auto_escape": true, "group_id": ` +u.GroupTo + `, "message": "` + message + `"}`
-
-	log.Printf("get ct: %v \n", ct)
-	var jsonstr = []byte(ct)
-	buffer:= bytes.NewBuffer(jsonstr)
-	request, err := http.NewRequest("POST", sendURL, buffer)
-	if err != nil {
-		body, _ := json.Marshal(&Response{
-			Code:    StatusServerNetworkError,
-			Message: "服务端网络异常,请稍后再试",
-		})
-		Write(w, body)
-		return
-	}
-	request.Header.Set("Content-Type", "application/json;charset=UTF-8")
-	client := http.Client{}
-	resp, err := client.Do(request.WithContext(context.TODO()))
+	resp, err := http.Post(sendURL, "application/x-www-form-urlencoded", strings.NewReader("group_id="+u.GroupTo+"&message="+message+"&auto_escape=true"))
 	if err != nil {
 		body, _ := json.Marshal(&Response{
 			Code:    StatusServerNetworkError,
