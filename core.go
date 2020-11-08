@@ -653,7 +653,7 @@ func GroupSend(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 		RetCode int64  `json:"retcode"`
 		Status  string `json:"status"`
 	}{}
-	resp, err := http.Post(sendURL, "application/x-www-form-urlencoded", strings.NewReader("group_id="+u.GroupTo+"&message="+message+"&auto_escape=true"))
+	resp, err := http.Post(sendURL, "application/x-www-form-urlencoded", strings.NewReader("group_id="+u.GroupTo+"&message="+message))
 	if err != nil {
 		body, _ := json.Marshal(&Response{
 			Code:    StatusServerNetworkError,
