@@ -1,6 +1,7 @@
 package main
 
 import (
+	"google.golang.org/appengine/log"
 	"regexp"
 	"strings"
 )
@@ -65,6 +66,7 @@ func convJson(msg string) string {
 		raw = strings.ReplaceAll(raw, "[", "&#91;")
 		raw = strings.ReplaceAll(raw, "]", "&#93;")
 		msg = strings.ReplaceAll(msg, v[0], `[CQ:json, data=` + raw + `]`)
+		log.Infof("json msg: %v \n", msg)
 	}
 	return msg
 }
