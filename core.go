@@ -413,123 +413,6 @@ func Send(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	Write(w, _t)
 }
 
-// WxSend 发起微信推送
-func WxSend(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	var message string
-	//优先GET 其次获取POST 再次获取POST-body
-	if r.URL.Query().Get("c") != "" {
-		message = r.URL.Query().Get("c")
-	} else if r.Method == "POST" {
-		message = r.PostFormValue("c")
-	}
-	//都为空? 尝试获取raw
-	if message == "" {
-		buf := make([]byte, RecvBuff)
-		n, _ := r.Body.Read(buf)
-		message = string(buf[:n])
-	}
-	//检测长度
-	rawContent := []rune(message)
-	if len(rawContent) > SendLength || len(rawContent) == 0 {
-		body, _ := json.Marshal(&Response{
-			Code:    StatusClientError,
-			Message: "文本超限或不能为空 推送失败",
-		})
-		Write(w, body)
-		return
-	}
-
-	u, _, err := SearchByKey(p.ByName("skey"))
-	if err != nil {
-		//失败 返回错误
-		body, _ := json.Marshal(&Response{
-			Code:    StatusServerGeneralError,
-			Message: err.Error(),
-		})
-		Write(w, body)
-		return
-	}
-	//检测是否绑定
-	if u.WxPusherUid == "" {
-		body, _ := json.Marshal(&Response{
-			Code:    StatusClientError,
-			Message: "用户未绑定推送微信公众号",
-		})
-		Write(w, body)
-		return
-	}
-
-	//内容 --> 敏感词检验
-	validate, _ := filter.Validate(message)
-	if !validate {
-		//文本不正常
-		u.Fouls++
-	}
-	//内容 --> 敏感词过滤
-	message = filter.Replace(message, '*')
-
-	//检测发送次数是否达到上限 是则不允许再次发送
-	if u.Count > SendLimit {
-		body, _ := json.Marshal(&Response{
-			Code:    StatusServerForbid,
-			Message: "当日推送数据已达到上限",
-		})
-		Write(w, body)
-		return
-	}
-	//更新count
-	zeroPoint, _ := time.ParseInLocation("2006-01-02",
-		time.Now().Format("2006-01-02"), time.Local) //zeroPoint是当日零点
-	if u != nil && zeroPoint.Unix() < u.LastSend {
-		//未到第二日 执行count++
-		_, _ = engine.ID(u.Id).Update(&User{
-			Count:    u.Count + 1,
-			Fouls:    u.Fouls,
-			LastSend: time.Now().Unix(),
-		})
-	} else if u != nil && zeroPoint.Unix() >= u.LastSend {
-		//到了第二日 重置count
-		_, _ = engine.ID(u.Id).Update(&User{
-			Count:    1,
-			Fouls:    u.Fouls,
-			LastSend: time.Now().Unix(),
-		})
-	}
-
-	var send = func(wxUid, content string) error {
-		if wxUid == "" {
-			return errors.New("未绑定微信")
-		}
-		if content == "" {
-			return errors.New("推送内容不能为空")
-		}
-
-		msg := wxModel.NewMessage(conf.WxPusherToken).SetContent(content).AddUId(wxUid)
-		_, err := wxpusher.SendMessage(msg)
-		if err != nil {
-			return err
-		}
-		return nil
-	}
-	err = send(u.WxPusherUid, message)
-	if err != nil {
-		//转换失败 说明id有问题
-		ret, _ := json.Marshal(&Response{
-			Code:    StatusServerGeneralError,
-			Message: "微信推送异常:" + err.Error(),
-		})
-		Write(w, ret)
-		return
-	}
-	ret := &Response{
-		Code:    StatusOk,
-		Message: "ok",
-		Data:    nil,
-	}
-	_t, _ := json.Marshal(ret)
-	Write(w, _t)
-}
-
 // GroupSend 发起推送
 func GroupSend(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	var message string
@@ -1323,6 +1206,123 @@ func EmailBind(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	})
 	Write(w, ret)
 	return
+}
+
+// WxSend 发起微信推送
+func WxSend(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	var message string
+	//优先GET 其次获取POST 再次获取POST-body
+	if r.URL.Query().Get("c") != "" {
+		message = r.URL.Query().Get("c")
+	} else if r.Method == "POST" {
+		message = r.PostFormValue("c")
+	}
+	//都为空? 尝试获取raw
+	if message == "" {
+		buf := make([]byte, RecvBuff)
+		n, _ := r.Body.Read(buf)
+		message = string(buf[:n])
+	}
+	//检测长度
+	rawContent := []rune(message)
+	if len(rawContent) > SendLength || len(rawContent) == 0 {
+		body, _ := json.Marshal(&Response{
+			Code:    StatusClientError,
+			Message: "文本超限或不能为空 推送失败",
+		})
+		Write(w, body)
+		return
+	}
+
+	u, _, err := SearchByKey(p.ByName("skey"))
+	if err != nil {
+		//失败 返回错误
+		body, _ := json.Marshal(&Response{
+			Code:    StatusServerGeneralError,
+			Message: err.Error(),
+		})
+		Write(w, body)
+		return
+	}
+	//检测是否绑定
+	if u.WxPusherUid == "" {
+		body, _ := json.Marshal(&Response{
+			Code:    StatusClientError,
+			Message: "用户未绑定推送微信公众号",
+		})
+		Write(w, body)
+		return
+	}
+
+	//内容 --> 敏感词检验
+	validate, _ := filter.Validate(message)
+	if !validate {
+		//文本不正常
+		u.Fouls++
+	}
+	//内容 --> 敏感词过滤
+	message = filter.Replace(message, '*')
+
+	//检测发送次数是否达到上限 是则不允许再次发送
+	if u.Count > SendLimit {
+		body, _ := json.Marshal(&Response{
+			Code:    StatusServerForbid,
+			Message: "当日推送数据已达到上限",
+		})
+		Write(w, body)
+		return
+	}
+	//更新count
+	zeroPoint, _ := time.ParseInLocation("2006-01-02",
+		time.Now().Format("2006-01-02"), time.Local) //zeroPoint是当日零点
+	if u != nil && zeroPoint.Unix() < u.LastSend {
+		//未到第二日 执行count++
+		_, _ = engine.ID(u.Id).Update(&User{
+			Count:    u.Count + 1,
+			Fouls:    u.Fouls,
+			LastSend: time.Now().Unix(),
+		})
+	} else if u != nil && zeroPoint.Unix() >= u.LastSend {
+		//到了第二日 重置count
+		_, _ = engine.ID(u.Id).Update(&User{
+			Count:    1,
+			Fouls:    u.Fouls,
+			LastSend: time.Now().Unix(),
+		})
+	}
+
+	var send = func(wxUid, content string) error {
+		if wxUid == "" {
+			return errors.New("未绑定微信")
+		}
+		if content == "" {
+			return errors.New("推送内容不能为空")
+		}
+
+		msg := wxModel.NewMessage(conf.WxPusherToken).SetContent(content).AddUId(wxUid)
+		_, err := wxpusher.SendMessage(msg)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	err = send(u.WxPusherUid, message)
+	if err != nil {
+		//转换失败 说明id有问题
+		ret, _ := json.Marshal(&Response{
+			Code:    StatusServerGeneralError,
+			Message: "微信推送异常:" + err.Error(),
+		})
+		Write(w, ret)
+		return
+	}
+	ret := &Response{
+		Code:    StatusOk,
+		Message: "ok",
+		Data:    nil,
+	}
+	_t, _ := json.Marshal(ret)
+	Write(w, _t)
 }
 
 // UserCount 统计用户数目
