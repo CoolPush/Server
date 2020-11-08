@@ -44,7 +44,8 @@ func convFace(msg string) string {
 
 func convMusic(msg string) string {
 	var reMusic = regexp.MustCompile(CQMusic)
-	find := reMusic.FindAllStringSubmatch(msg,-1)if len(find) > 0 {
+	find := reMusic.FindAllStringSubmatch(msg,-1)
+	if len(find) > 0 {
 		msg = strings.ReplaceAll(msg, "\n", "")
 	}
 	for _, v := range find {
