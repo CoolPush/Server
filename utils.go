@@ -63,21 +63,15 @@ func convXml(msg string) string {
 }
 
 func convJson(msg string) string {
-	var t = msg
-	t = strings.ReplaceAll(t, "\n", "")
 	var reJson = regexp.MustCompile(CQJson)
-	find := reJson.FindAllStringSubmatch(t,-1)
-	if len(find) > 0 {
-		for _, v := range find {
-			var raw = v[1]
-			raw = strings.ReplaceAll(raw, ",", "&#44;")
-			raw = strings.ReplaceAll(raw, "&", "&amp;")
-			raw = strings.ReplaceAll(raw, "[", "&#91;")
-			raw = strings.ReplaceAll(raw, "]", "&#93;")
-			msg = strings.ReplaceAll(msg, v[0], `[CQ:json,data=` + raw + `]`)
-			fmt.Printf("json msg: %v \n", msg)
-		}
-		return t
+	find := reJson.FindAllStringSubmatch(msg,-1)
+	for _, v := range find {
+		var raw = v[1]
+		raw = strings.ReplaceAll(raw, ",", "&#44;")
+		raw = strings.ReplaceAll(raw, "&", "&amp;")
+		raw = strings.ReplaceAll(raw, "[", "&#91;")
+		raw = strings.ReplaceAll(raw, "]", "&#93;")
+		msg = strings.ReplaceAll(msg, v[0], `[CQ:json,data=` + raw + `]`)
 	}
 	return msg
 }
