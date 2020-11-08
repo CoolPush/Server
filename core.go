@@ -315,38 +315,6 @@ func Send(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 		return
 	}
 
-	//内容 --> 敏感词检验
-	validate, _ := filter.Validate(message)
-	if !validate {
-		//文本不正常
-		u.Fouls++
-	}
-	//内容 --> 敏感词过滤
-	message = filter.Replace(message, '*')
-	//CQ码转换
-	var reImage = regexp.MustCompile(CQImage)
-	find := reImage.FindAllStringSubmatch(message,-1)
-	for _, v := range find {
-		message = strings.ReplaceAll(message, v[0], `[CQ:image,file=` + v[1] + `]`)
-	}
-	var reAt = regexp.MustCompile(CQAt)
-	find = reAt.FindAllStringSubmatch(message,-1)
-	for _, v := range find {
-		message = strings.ReplaceAll(message, v[0], `[CQ:at,qq=` + v[1] + `]`)
-	}
-	var reFace = regexp.MustCompile(CQFace)
-	find = reFace.FindAllStringSubmatch(message,-1)
-	for _, v := range find {
-		message = strings.ReplaceAll(message, v[0], `[CQ:face,id=` + v[1] + `]`)
-	}
-	var reMusic = regexp.MustCompile(CQMusic)
-	find = reMusic.FindAllStringSubmatch(message,-1)
-	for _, v := range find {
-		message = strings.ReplaceAll(message, v[0], `[CQ:music,` + v[1] + `]`)
-	}
-	//内容 --> 字符编码
-	message = url.QueryEscape(message)
-
 	//检测发送次数是否达到上限 是则不允许再次发送
 	if u.Count > SendLimit {
 		body, _ := json.Marshal(&Response{
@@ -356,6 +324,31 @@ func Send(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 		Write(w, body)
 		return
 	}
+
+	//内容 --> 敏感词检验
+	validate, _ := filter.Validate(message)
+	if !validate {
+		//文本不正常
+		u.Fouls++
+	}
+	//内容 --> 敏感词过滤
+	message = filter.Replace(message, '*')
+	//CQ码转换
+	message = convImg(message)
+
+	message = convAt(message)
+
+	message = convFace(message)
+
+	message = convMusic(message)
+
+	message = convXml(message)
+
+	message = convJson(message)
+
+	//内容 --> 字符编码
+	message = url.QueryEscape(message)
+
 	//更新count
 	zeroPoint, _ := time.ParseInLocation("2006-01-02",
 		time.Now().Format("2006-01-02"), time.Local) //zeroPoint是当日零点
