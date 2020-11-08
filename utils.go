@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"regexp"
 	"strings"
 )
@@ -51,7 +50,6 @@ func convXml(msg string) string {
 		raw = strings.ReplaceAll(raw, "&", "&amp;")
 		raw = strings.ReplaceAll(raw, "[", "&#91;")
 		raw = strings.ReplaceAll(raw, "]", "&#93;")
-		raw = strings.ReplaceAll(raw, "/", "&#93;")
 		msg = strings.ReplaceAll(msg, v[0], `[CQ:xml, data=` + raw + `]`)
 	}
 	return msg
@@ -63,12 +61,10 @@ func convJson(msg string) string {
 	for _, v := range find {
 		var raw = v[1]
 		//raw = strings.ReplaceAll(v[1], ",", "&#44;")
-		raw = strings.ReplaceAll(v[1], "&", "&amp;")
-		raw = strings.ReplaceAll(v[1], "[", "&#91;")
-		raw = strings.ReplaceAll(v[1], "]", "&#93;")
-		raw = strings.ReplaceAll(v[1], "/", "&#93;")
+		raw = strings.ReplaceAll(raw, "&", "&amp;")
+		raw = strings.ReplaceAll(raw, "[", "&#91;")
+		raw = strings.ReplaceAll(raw, "]", "&#93;")
 		msg = strings.ReplaceAll(msg, v[0], `[CQ:json, data=` + raw + `]`)
-		fmt.Printf("get msg: %v \n", msg)
 	}
 	return msg
 }
