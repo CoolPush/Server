@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 )
@@ -67,6 +68,7 @@ func convJson(msg string) string {
 		raw = strings.ReplaceAll(v[1], "]", "&#93;")
 		raw = strings.ReplaceAll(v[1], "/", "&#93;")
 		msg = strings.ReplaceAll(msg, v[0], `[CQ:json, data=` + raw + `]`)
+		fmt.Printf("get msg: %v \n", msg)
 	}
 	return msg
 }
