@@ -11,7 +11,6 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -586,26 +585,19 @@ func GroupSend(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	//内容 --> 敏感词过滤
 	message = filter.Replace(message, '*')
 	//CQ码转换
-	var reImage = regexp.MustCompile(CQImage)
-	find := reImage.FindAllStringSubmatch(message,-1)
-	for _, v := range find {
-		message = strings.ReplaceAll(message, v[0], `[CQ:image,file=` + v[1] + `]`)
-	}
-	var reAt = regexp.MustCompile(CQAt)
-	find = reAt.FindAllStringSubmatch(message,-1)
-	for _, v := range find {
-		message = strings.ReplaceAll(message, v[0], `[CQ:at,qq=` + v[1] + `]`)
-	}
-	var reFace = regexp.MustCompile(CQFace)
-	find = reFace.FindAllStringSubmatch(message,-1)
-	for _, v := range find {
-		message = strings.ReplaceAll(message, v[0], `[CQ:face,id=` + v[1] + `]`)
-	}
-	var reMusic = regexp.MustCompile(CQMusic)
-	find = reMusic.FindAllStringSubmatch(message,-1)
-	for _, v := range find {
-		message = strings.ReplaceAll(message, v[0], `[CQ:music,` + v[1] + `]`)
-	}
+	//CQ码转换
+	message = convImg(message)
+
+	message = convAt(message)
+
+	message = convFace(message)
+
+	message = convMusic(message)
+
+	message = convXml(message)
+
+	message = convJson(message)
+
 	//内容 --> 字符编码
 	message = url.QueryEscape(message)
 
