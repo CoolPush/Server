@@ -51,7 +51,7 @@ func convXml(msg string) string {
 		raw = strings.ReplaceAll(raw, "&", "&amp;")
 		raw = strings.ReplaceAll(raw, "[", "&#91;")
 		raw = strings.ReplaceAll(raw, "]", "&#93;")
-		msg = strings.ReplaceAll(msg, v[0], `[CQ:xml, data=` + raw + `]`)
+		msg = strings.ReplaceAll(msg, v[0], `[CQ:xml,data=` + raw + `]`)
 	}
 	return msg
 }
@@ -65,7 +65,7 @@ func convJson(msg string) string {
 		raw = strings.ReplaceAll(raw, "&", "&amp;")
 		raw = strings.ReplaceAll(raw, "[", "&#91;")
 		raw = strings.ReplaceAll(raw, "]", "&#93;")
-		msg = strings.ReplaceAll(msg, v[0], `[CQ:json, data=` + raw + `]`)
+		msg = strings.ReplaceAll(msg, v[0], `[CQ:json,data=` + raw + `]`)
 		fmt.Printf("json msg: %v \n", msg)
 	}
 	return msg
