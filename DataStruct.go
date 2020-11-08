@@ -20,8 +20,8 @@ const (
 	CQAt = "@at=(.*?)@"
 	CQFace = "@face=(.*?)@"
 	CQMusic = "@music=\\[(.*?)\\]@"
-	CQXml = "@xml=\\[(.*?)\\]@"
-	CQJson = "@json=\\[(.*?)\\]@"
+	CQXml = "@xml=\\(.*?)\\@"
+	CQJson = "@json=\\(.*?)\\@"
 )
 
 // User 用户表结构
