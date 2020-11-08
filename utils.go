@@ -46,7 +46,7 @@ func convXml(msg string) string {
 	find := reXml.FindAllStringSubmatch(msg,-1)
 	for _, v := range find {
 		var raw = v[1]
-		//raw = strings.ReplaceAll(v[1], ",", "&#44;")
+		raw = strings.ReplaceAll(raw, ",", "&#44;")
 		raw = strings.ReplaceAll(raw, "&", "&amp;")
 		raw = strings.ReplaceAll(raw, "[", "&#91;")
 		raw = strings.ReplaceAll(raw, "]", "&#93;")
@@ -60,7 +60,7 @@ func convJson(msg string) string {
 	find := reJson.FindAllStringSubmatch(msg,-1)
 	for _, v := range find {
 		var raw = v[1]
-		//raw = strings.ReplaceAll(v[1], ",", "&#44;")
+		raw = strings.ReplaceAll(raw, ",", "&#44;")
 		raw = strings.ReplaceAll(raw, "&", "&amp;")
 		raw = strings.ReplaceAll(raw, "[", "&#91;")
 		raw = strings.ReplaceAll(raw, "]", "&#93;")
