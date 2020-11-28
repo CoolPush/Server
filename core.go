@@ -1252,7 +1252,7 @@ func WwSend(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 		return
 	}
 
-	log.Infof("user id: %v", user.UserId)
+	log.Infof("user info: %+v", user)
 
 	wwConf := conf.Wework
 	msgHandler := wework.NewMessage(&wework.Wework{

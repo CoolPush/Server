@@ -20,7 +20,6 @@ const (
 )
 
 type Message struct {
-	Touser    string
 	Ident     *Wework
 	Text      *TextRequest
 	TextCard  *TextCardRequest
