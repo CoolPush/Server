@@ -40,6 +40,8 @@ func (ww *Wework) GetCacheAccessToken() (string, error) {
 		log.Errorf("get access_token err: %v", err)
 		return "", err
 	}
+
+	log.Infof("get redis access_token: %v", val)
 	return val, nil
 }
 
@@ -52,20 +54,14 @@ func (ww *Wework) GetAccessToken() (string, error) {
 		ExpiresIn   uint32 `json:"expires_in"`
 	}
 
-	log.Infof("get url: %v", url)
-
 	var rsp Response
-	err := gout.
-		// POST请求
-		GET(url).
-		// BindJSON解析返回的body内容
-		// 同类函数有BindBody, BindYAML, BindXML
-		BindJSON(&rsp).
-		Do()
+	err := gout.GET(url).BindJSON(&rsp).Do()
 	if err != nil {
 		log.Errorf("get access token err: %v", err)
 		return "", err
 	}
+
+	log.Infof("get access_token: %v", rsp)
 
 	err = rdb.Set(ctx, AccessToken, rsp.AccessToken, time.Duration(rsp.ExpiresIn)*time.Second).Err()
 	if err != nil {

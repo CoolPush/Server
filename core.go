@@ -1379,7 +1379,7 @@ func WwSend(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 		rsp, err = msgHandler.SendText2User()
 	}
 	if err != nil {
-		log.Errorf("empty skey")
+		log.Errorf("err: %v", err)
 		body, _ := json.Marshal(&Response{
 			Code: StatusServerGeneralError,
 		})
