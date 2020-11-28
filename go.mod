@@ -8,7 +8,6 @@ require (
 	github.com/go-redis/redis/v8 v8.4.0
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/go-xorm/xorm v0.7.9
-	github.com/gomodule/redigo v1.8.3
 	github.com/google/uuid v1.1.1
 	github.com/guonaihong/gout v0.1.3
 	github.com/importcjj/sensitive v0.0.0-20200106142752-42d1c505be7b
