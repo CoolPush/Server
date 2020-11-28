@@ -63,7 +63,7 @@ func (m *Message) SendText2User() (*MessageSendResponse, error) {
 	var rsp MessageSendResponse
 	log.Infof("send text: %v", m.Text)
 	log.Infof("send to user: %v", m.Text.Touser)
-	err = gout.POST(url).Debug(true).SetBody(m.Text).BindJSON(&rsp).Do()
+	err = gout.POST(url).Debug(true).SetJSON(m.Text).BindJSON(&rsp).Do()
 	if err != nil {
 		log.Errorf("err: %v", err)
 		return nil, err
