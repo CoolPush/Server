@@ -1,6 +1,7 @@
 package main
 
 import (
+	"CoolPush/wework"
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
@@ -8,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -146,7 +146,13 @@ func SearchByOID(oid string, loginType string) (*User, bool, error) {
 func SearchByQQ(qq string) ([]*User, error) {
 	var list []*User
 	err := engine.Where("send_to = ?", qq).Find(&list)
-	return list,err
+	return list, err
+}
+
+func SearchBySkeyBindWework(skey string) (*WeworkUser, bool, error) {
+	var u = &WeworkUser{}
+	exist, err := engine.Where("skey = ? and deleted_at = 0", skey).Get(u)
+	return u, exist, err
 }
 
 // Write 输出返回结果
@@ -1176,7 +1182,7 @@ func EmailBind(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	}
 	email := r.URL.Query().Get("email")
 	var user = &User{
-		Id:       id,
+		Id:    id,
 		Email: email,
 	}
 
@@ -1325,6 +1331,202 @@ func WxSend(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	Write(w, _t)
 }
 
+// WwSend 发送企业微信
+func WwSend(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	msgType, err := strconv.ParseUint(r.URL.Query().Get("type"), 10, 64)
+	if err != nil {
+		log.Errorf("err: %v", err)
+		body, _ := json.Marshal(&Response{
+			Code:    StatusServerNetworkError,
+			Message: "服务端错误",
+		})
+		Write(w, body)
+		return
+	}
+
+	skey := p.ByName("skey")
+	if skey == "" {
+		log.Errorf("empty skey")
+		body, _ := json.Marshal(&Response{
+			Code:    StatusClientError,
+			Message: "empty skey",
+		})
+		Write(w, body)
+		return
+	}
+
+	// 检测是否有记录绑定
+	user, exist, err := SearchBySkeyBindWework(skey)
+	if err != nil {
+		log.Errorf("empty skey")
+		body, _ := json.Marshal(&Response{
+			Code: StatusServerGeneralError,
+		})
+		Write(w, body)
+		return
+	}
+
+	if !exist {
+		body, _ := json.Marshal(&Response{
+			Code:    StatusClientError,
+			Message: "user not found",
+		})
+		Write(w, body)
+		return
+	}
+
+	_t := uint32(msgType)
+	wwConf := conf.Wework
+	msgHandler := wework.NewMessage(&wework.Wework{
+		AgentId:        wwConf.AgentId,
+		CorpId:         wwConf.CorpId,
+		Secret:         wwConf.Secret,
+		Token:          wwConf.Token,
+		EncodingAESKey: wwConf.EncodingAESKey,
+		URL:            wwConf.URL,
+	})
+	var rsp *wework.MessageSendResponse
+	switch _t {
+	case wework.TypeTextCard:
+		type TextCardReq struct {
+			Title  string `json:"title"`
+			Desc   string `json:"desc"`
+			Href   string `json:"href"`
+			Btntxt string `json:"btntxt"`
+		}
+		body, _ := ioutil.ReadAll(r.Body)
+		var tc TextCardReq
+		err = json.Unmarshal(body, &tc)
+		if err != nil {
+			body, _ := json.Marshal(&Response{
+				Code:    StatusClientError,
+				Message: "args err",
+			})
+			Write(w, body)
+			return
+		}
+		msgHandler.TextCard = &wework.TextCardRequest{
+			Touser:  user.UserId,
+			Msgtype: wework.TextCard,
+			Agentid: msgHandler.Ident.AgentId,
+			Textcard: wework.Textcard{
+				Title:       tc.Title,
+				Description: tc.Desc,
+				URL:         tc.Href,
+				Btntxt:      tc.Btntxt,
+			},
+		}
+		rsp, err = msgHandler.SendText2User()
+	case wework.TypeImageCard:
+		type ImageCardReq struct {
+			Title  string `json:"title"`
+			Desc   string `json:"desc"`
+			Href   string `json:"href"`
+			Picurl string `json:"pic"`
+		}
+		body, _ := ioutil.ReadAll(r.Body)
+		var ic ImageCardReq
+		err = json.Unmarshal(body, &ic)
+		if err != nil {
+			body, _ := json.Marshal(&Response{
+				Code:    StatusClientError,
+				Message: "args err",
+			})
+			Write(w, body)
+			return
+		}
+		msgHandler.ImageCard = &wework.ImageCardRequest{
+			Touser:  user.UserId,
+			Msgtype: wework.ImageCard,
+			Agentid: msgHandler.Ident.AgentId,
+			News: wework.News{
+				Articles: []wework.Article{
+					{
+						Title:       ic.Title,
+						Description: ic.Desc,
+						URL:         ic.Href,
+						Picurl:      ic.Picurl,
+					},
+				},
+			},
+		}
+		rsp, err = msgHandler.SendImageCard2User()
+	case wework.TypeMarkdown:
+		buf := make([]byte, RecvBuff)
+		n, _ := r.Body.Read(buf)
+		message := string(buf[:n])
+		//内容 --> 敏感词检验
+		validate, _ := filter.Validate(message)
+		if !validate {
+			log.Errorf("warning keyword")
+			body, _ := json.Marshal(&Response{
+				Code:    StatusServerForbid,
+				Message: "包含敏感词, 请求被拒绝",
+			})
+			Write(w, body)
+			return
+		}
+		msgHandler.Markdown = &wework.MarkdownRequest{
+			Touser:  user.UserId,
+			Msgtype: wework.Markdown,
+			Agentid: msgHandler.Ident.AgentId,
+			Markdown: wework.Markdowns{
+				Content: message,
+			},
+		}
+		rsp, err = msgHandler.SendMarkdown2User()
+	default:
+		buf := make([]byte, RecvBuff)
+		n, _ := r.Body.Read(buf)
+		message := string(buf[:n])
+		//内容 --> 敏感词检验
+		validate, _ := filter.Validate(message)
+		if !validate {
+			log.Errorf("warning keyword")
+			body, _ := json.Marshal(&Response{
+				Code:    StatusServerForbid,
+				Message: "包含敏感词, 请求被拒绝",
+			})
+			Write(w, body)
+			return
+		}
+		msgHandler.Text = &wework.TextRequest{
+			Touser:  user.UserId,
+			Msgtype: wework.Text,
+			Agentid: msgHandler.Ident.AgentId,
+			Text: wework.Texts{
+				Content: message,
+			},
+		}
+		rsp, err = msgHandler.SendText2User()
+	}
+	if err != nil {
+		log.Errorf("empty skey")
+		body, _ := json.Marshal(&Response{
+			Code: StatusServerGeneralError,
+		})
+		Write(w, body)
+		return
+	}
+
+	if rsp.Errcode != 0 {
+		log.Errorf("empty skey")
+		body, _ := json.Marshal(&Response{
+			Code: StatusServerGeneralError,
+		})
+		Write(w, body)
+		return
+	}
+
+	ret := &Response{
+		Code:    StatusOk,
+		Message: "ok",
+		Data:    nil,
+	}
+	_rsp, _ := json.Marshal(ret)
+	Write(w, _rsp)
+}
+
 // UserCount 统计用户数目
 func UserCount(w http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
 	count, err := engine.Table(&User{}).Count()
@@ -1467,7 +1669,7 @@ func CancelWxPusher(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 	}
 	//检测用户是否存在
 	var user = &User{
-		Id:       id,
+		Id:          id,
 		WxPusherUid: "",
 	}
 	if _, exist, _ := SearchByID(id); !exist {
@@ -1776,7 +1978,7 @@ func EmailSend(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 }
 
 // GetUserInfo 获取用户信息
-func GetUserInfo(w http.ResponseWriter, r *http.Request, _ httprouter.Params)  {
+func GetUserInfo(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var qq = r.URL.Query().Get("qq")
 	var skey = r.URL.Query().Get("skey")
 
@@ -1804,7 +2006,7 @@ func GetUserInfo(w http.ResponseWriter, r *http.Request, _ httprouter.Params)  {
 		ret, _ := json.Marshal(&Response{
 			Code:    StatusOk,
 			Message: "",
-			Data: u,
+			Data:    u,
 		})
 		Write(w, ret)
 		return
@@ -1826,7 +2028,7 @@ func GetUserInfo(w http.ResponseWriter, r *http.Request, _ httprouter.Params)  {
 		ret, _ := json.Marshal(&Response{
 			Code:    StatusOk,
 			Message: "",
-			Data: list,
+			Data:    list,
 		})
 		Write(w, ret)
 		return
@@ -1881,6 +2083,7 @@ func Run() {
 	router.POST("/wx/:skey", WxSend)
 	router.GET("/email/:skey", EmailSend)
 	router.POST("/email/:skey", EmailSend)
+	router.POST("/ww/:skey", WwSend)
 
 	// 获得WxPusher二维码
 	router.GET("/qr_code", GenWxPusherQrCode)

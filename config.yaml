@@ -51,3 +51,14 @@ environments:
       port: 465
       username: xuthus5@sina.cn
       password: 686377ed5ad0f5a6
+  wework:
+    agent_id: 1000002
+    corp_id: wwbc847e37e4804b67
+    secret: z2Ea3uj17UNYO19GqexWT-rg6NmwINVv7cswr8oc_lA
+    callback_token: REAqcqMtwMD5wvw8
+    callback_encoding_aes_key: rH9C62Et
+    callback_url: https://push.xuthus.cc/callback/wework
+  redis:
+    addr: 127.0.0.1:1
+    password: 123
+    db: 1

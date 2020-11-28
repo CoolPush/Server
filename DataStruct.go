@@ -3,7 +3,7 @@ package main
 import "github.com/dgrijalva/jwt-go"
 
 const (
-	FoulsNumber              = 10    //违规 FoulsNumber 次后 账号将被封禁
+	FoulsNumber              = 10000 //违规 FoulsNumber 次后 账号将被封禁
 	SendLimit                = 10000 //发送次数限制 当日发送次数超过 SendLimit 后禁止发送
 	SendLength               = 1500  //指定QQ消息最大发送长度
 	RecvBuff                 = 2048  //指定QQ消息接收缓存长度
@@ -17,11 +17,11 @@ const (
 
 const (
 	CQImage = "@image=(.*?)@"
-	CQAt = "@at=(.*?)@"
-	CQFace = "@face=(.*?)@"
+	CQAt    = "@at=(.*?)@"
+	CQFace  = "@face=(.*?)@"
 	CQMusic = "@music=\\[(.*?)\\]@"
-	CQXml = "(?s)@xml=(.*?)@"
-	CQJson = "(?s)@json=(.*?)@"
+	CQXml   = "(?s)@xml=(.*?)@"
+	CQJson  = "(?s)@json=(.*?)@"
 )
 
 // User 用户表结构
@@ -79,4 +79,14 @@ type WxPusherResponse struct {
 		UID         string `json:"uid"`
 		Extra       string `json:"extra"`
 	} `json:"data"`
+}
+
+type WeworkUser struct {
+	Id        int64  `json:"id"`
+	CreatedAt uint32 `json:"created_at"`
+	UpdatedAt uint32 `json:"updated_at"`
+	DeletedAt uint32 `json:"deleted_at"`
+	Skey      string `json:"skey" xorm:"varchar(32) notnull unique"`
+	UserId    string `json:"user_id" xorm:"varchar(32) notnull"`
+	Username  string `json:"username" xorm:"varchar(32)"`
 }

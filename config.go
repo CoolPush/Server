@@ -24,6 +24,8 @@ type Environments struct {
 	Robots        map[string]string `yaml:"robots"`         //机器人列表
 	WxPusherToken string            `yaml:"wxpusher_token"` //wxpusher 应用token
 	EmailList     []Email           `yaml:"email_list"`     //邮箱列表
+	Wework        Wework            `yaml:"wework"`         //企业微信配置
+	Redis         Redis             `yaml:"redis"`          //redis配置
 }
 
 // HTTPS 配置
@@ -73,6 +75,22 @@ type Email struct {
 	Port     int    `yaml:"port"`
 	Username string `yaml:"username"`
 	Password string `yaml:"password"`
+}
+
+// WeWork 企业微信配置
+type Wework struct {
+	AgentId        uint32 `yaml:"agent_id"`
+	CorpId         string `yaml:"corp_id"`
+	Secret         string `yaml:"secret"`
+	Token          string `yaml:"callback_token"`
+	EncodingAESKey string `yaml:"callback_encoding_aes_key"`
+	URL            string `yaml:"url"`
+}
+
+type Redis struct {
+	Addr     string `yaml:"addr"`
+	Password string `yaml:"password"`
+	Db       string `yaml:"db"`
 }
 
 // conf 是一个全局的配置信息实例 项目运行只读取一次 是一个单例
