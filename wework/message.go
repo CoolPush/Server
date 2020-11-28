@@ -59,10 +59,7 @@ func (m *Message) SendText2User() (*MessageSendResponse, error) {
 		return nil, err
 	}
 	url := fmt.Sprintf("https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token=%v", token)
-	log.Infof("send url: %v", url)
 	var rsp MessageSendResponse
-	log.Infof("send text: %v", m.Text)
-	log.Infof("send to user: %v", m.Text.Touser)
 	err = gout.POST(url).Debug(true).SetJSON(m.Text).BindJSON(&rsp).Do()
 	if err != nil {
 		log.Errorf("err: %v", err)
