@@ -4,7 +4,6 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/go-xorm/xorm"
 	"time"
-	"xorm.io/core"
 )
 
 var engine *xorm.Engine
@@ -26,5 +25,6 @@ func ConnectMySQL() {
 	//设置本地时区
 	engine.TZLocation, _ = time.LoadLocation("Asia/Shanghai")
 	//是否开启调试
-	engine.Logger().SetLevel(core.LOG_DEBUG)
+	//engine.Logger().SetLevel(core.LOG_DEBUG)
+	engine.ShowSQL(true)
 }
