@@ -4,7 +4,7 @@ import "github.com/go-redis/redis/v8"
 
 var rdb *redis.Client
 
-const redisHost = ""
+const redisHost = "127.0.0.1:6379"
 
 func init() {
 	//连接redis
