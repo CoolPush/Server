@@ -27,6 +27,7 @@ type UserChangeEvent struct {
 }
 
 func CallbackWework(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	log.Infof("get query: %v", r.URL.Query().Encode())
 	msgSignature := r.URL.Query().Get("msg_signature")
 	timestamp := r.URL.Query().Get("timestamp")
 	nonce := r.URL.Query().Get("nonce")
@@ -38,7 +39,7 @@ func CallbackWework(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 		Write(w, body)
 		return
 	}
-	verifyEchoStr := r.URL.Query().Get("echoStr")
+	verifyEchoStr := r.URL.Query().Get("echostr")
 	// 回调检验
 	if verifyEchoStr != "" {
 		wwConf := conf.Wework
@@ -61,7 +62,7 @@ func CallbackWework(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 	wxcpt := tools.NewWXBizMsgCrypt(wwConf.Token, wwConf.EncodingAESKey, wwConf.CorpId, tools.XmlType)
 	msg, cryptErr := wxcpt.DecryptMsg(msgSignature, timestamp, nonce, rawData)
 	if nil != cryptErr {
-		log.Errorf("DecryptMsg fail", cryptErr)
+		log.Errorf("DecryptMsg fail: %v", cryptErr)
 		Write(w, []byte("Failed"))
 		return
 	}
