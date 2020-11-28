@@ -12,11 +12,11 @@ var engine *xorm.Engine
 func ConnectMySQL() {
 	var err error
 	if engine, err = xorm.NewEngine("mysql", conf.Mysql); err != nil {
-		panic(err)
+		log.Panic(err)
 	}
 	//同步数据库结构
-	if err = engine.Sync2(new(User)); err != nil {
-		panic(err)
+	if err = engine.Sync2(new(User), new(WeworkUser)); err != nil {
+		log.Panic(err)
 	}
 	//用于设置最大打开的连接数，默认值为0表示不限制
 	engine.SetMaxOpenConns(32)
