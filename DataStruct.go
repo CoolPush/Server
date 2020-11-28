@@ -85,7 +85,6 @@ type WeworkUser struct {
 	Id        int64  `json:"id"`
 	CreatedAt uint32 `json:"created_at" xorm:"created"`
 	UpdatedAt uint32 `json:"updated_at" xorm:"updated"`
-	DeletedAt uint32 `json:"deleted_at" xorm:"deleted"`
 	Skey      string `json:"skey" xorm:"varchar(32) notnull unique"`
 	UserId    string `json:"user_id" xorm:"varchar(32) notnull"`
 	Username  string `json:"username" xorm:"varchar(32)"`
