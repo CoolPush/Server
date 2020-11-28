@@ -132,10 +132,10 @@ func SearchByQQ(qq string) ([]*User, error) {
 }
 
 func SearchBySkeyBindWework(skey string) (*WeworkUser, bool, error) {
-	var u = &WeworkUser{}
-	exist, err := engine.Where("skey = ? and deleted_at = 0", skey).Get(u)
+	var u WeworkUser
+	exist, err := engine.Where("skey = ?", skey).Get(&u)
 	log.Infof("get user: %v", u)
-	return u, exist, err
+	return &u, exist, err
 }
 
 func CreateWeworkUser(event UserChangeEvent) error {
