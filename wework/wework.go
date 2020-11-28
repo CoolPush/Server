@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-var log = tools.Log
+var log = tools.NewLog()
 
 const (
 	AccessToken = "access_token"
