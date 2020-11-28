@@ -26,5 +26,5 @@ func ConnectMySQL() {
 	engine.TZLocation, _ = time.LoadLocation("Asia/Shanghai")
 	//是否开启调试
 	//engine.Logger().SetLevel(core.LOG_DEBUG)
-	engine.ShowSQL(true)
+	//engine.ShowSQL(true)
 }
