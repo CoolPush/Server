@@ -1203,15 +1203,22 @@ func WxSend(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 
 // WwSend 发送企业微信
 func WwSend(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	msgType, err := strconv.ParseUint(r.URL.Query().Get("type"), 10, 64)
-	if err != nil {
-		log.Errorf("err: %v", err)
-		body, _ := json.Marshal(&Response{
-			Code:    StatusServerNetworkError,
-			Message: "服务端错误",
-		})
-		Write(w, body)
-		return
+	sendType := r.URL.Query().Get("type")
+	var msgType uint32 = 0
+	if sendType == "" {
+		msgType = 0
+	} else {
+		_t, err := strconv.ParseUint(sendType, 10, 64)
+		if err != nil {
+			log.Errorf("err: %v", err)
+			body, _ := json.Marshal(&Response{
+				Code:    StatusClientError,
+				Message: "参数错误",
+			})
+			Write(w, body)
+			return
+		}
+		msgType = uint32(_t)
 	}
 
 	skey := p.ByName("skey")
@@ -1245,7 +1252,6 @@ func WwSend(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 		return
 	}
 
-	_t := uint32(msgType)
 	wwConf := conf.Wework
 	msgHandler := wework.NewMessage(&wework.Wework{
 		AgentId:        wwConf.AgentId,
@@ -1256,7 +1262,7 @@ func WwSend(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 		URL:            wwConf.URL,
 	})
 	var rsp *wework.MessageSendResponse
-	switch _t {
+	switch msgType {
 	case wework.TypeTextCard:
 		type TextCardReq struct {
 			Title  string `json:"title"`
