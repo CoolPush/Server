@@ -1252,6 +1252,8 @@ func WwSend(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 		return
 	}
 
+	log.Infof("user id: %v", user.UserId)
+
 	wwConf := conf.Wework
 	msgHandler := wework.NewMessage(&wework.Wework{
 		AgentId:        wwConf.AgentId,
