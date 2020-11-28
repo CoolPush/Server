@@ -1232,8 +1232,6 @@ func WwSend(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 		return
 	}
 
-	log.Infof("get skey: %v", skey)
-
 	// 检测是否有记录绑定
 	user, exist, err := SearchBySkeyBindWework(skey)
 	if err != nil {
