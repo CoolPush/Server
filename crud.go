@@ -133,7 +133,8 @@ func SearchByQQ(qq string) ([]*User, error) {
 
 func SearchBySkeyBindWework(skey string) (*WeworkUser, bool, error) {
 	var u WeworkUser
-	exist, err := engine.Where("skey = ?", skey).Get(&u)
+	log.Infof("skey = ?", skey)
+	exist, err := engine.Table(&WeworkUser{}).Where("skey = ?", skey).Get(&u)
 	log.Infof("get user: %v", u)
 	return &u, exist, err
 }
