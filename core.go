@@ -1964,6 +1964,10 @@ func Run() {
 	// WxPusher 回调
 	router.POST("/callback/wx_pusher", WxPusherCallback)
 
+	// 企业微信
+	router.GET("/callback/wework", CallbackWework)
+	router.POST("/callback/wework", CallbackWework)
+
 	//统计用户数量
 	router.GET("/count", UserCount)
 
