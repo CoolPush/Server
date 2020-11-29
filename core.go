@@ -209,17 +209,17 @@ func Send(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	//内容 --> 敏感词过滤
 	message = filter.Replace(message, '*')
 	//CQ码转换
-	message = convImg(message)
-
-	message = convAt(message)
-
-	message = convFace(message)
-
-	message = convMusic(message)
-
-	message = convXml(message)
-
-	message = convJson(message)
+	//message = convImg(message)
+	//
+	//message = convAt(message)
+	//
+	//message = convFace(message)
+	//
+	//message = convMusic(message)
+	//
+	//message = convXml(message)
+	//
+	//message = convJson(message)
 
 	//内容 --> 字符编码
 	message = url.QueryEscape(message)
@@ -344,18 +344,17 @@ func GroupSend(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	//内容 --> 敏感词过滤
 	message = filter.Replace(message, '*')
 	//CQ码转换
-	//CQ码转换
-	message = convImg(message)
-
-	message = convAt(message)
-
-	message = convFace(message)
-
-	message = convMusic(message)
-
-	message = convXml(message)
-
-	message = convJson(message)
+	//message = convImg(message)
+	//
+	//message = convAt(message)
+	//
+	//message = convFace(message)
+	//
+	//message = convMusic(message)
+	//
+	//message = convXml(message)
+	//
+	//message = convJson(message)
 
 	//内容 --> 字符编码
 	message = url.QueryEscape(message)
