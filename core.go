@@ -211,9 +211,9 @@ func Send(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	//CQ码转换
 	//message = convImg(message)
 	//
-	//message = convAt(message)
+	message = convAt(message)
 	//
-	//message = convFace(message)
+	message = convFace(message)
 	//
 	//message = convMusic(message)
 	//
@@ -346,9 +346,9 @@ func GroupSend(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	//CQ码转换
 	//message = convImg(message)
 	//
-	//message = convAt(message)
+	message = convAt(message)
 	//
-	//message = convFace(message)
+	message = convFace(message)
 	//
 	//message = convMusic(message)
 	//
