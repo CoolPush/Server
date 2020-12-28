@@ -39,10 +39,8 @@ environments:
   cqhttp: http://127.0.0.1
   # 机器人列表 QQ:PORT
   robots:
-    371365873: :5700
-    723860385: :5701
-    228346469: :5702
-    1498598914: :5703
+    2292066393: :5710
+    2277671372: :5711
   # 微信推送token
   wxpusher_token: AT_RdjijWgwRmOyetqMN6STacLKXcDWSRxp
   # 可用的邮箱列表
