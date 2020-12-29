@@ -13,28 +13,28 @@ environments:
   # oauth授权
   oauth:
     github:
-      client_id: cc74ff2d2f067e5671f1
-      client_secret: 456bcfbbdd1c3195521ec9ac686920bc4743eb9e
+      client_id:
+      client_secret:
     gitee:
-      client_id: 6c40ca5143961574faba6b8b9e49b5b6ecc9345ce8cc82eaa2b2d2a30b5f3c70
-      client_secret: bbfa2ef7648999dc66cd687228d57e8454c3f993b96988d488c5ef4e6af7f1e7
-      callback: https://cp.xuthus.cc
+      client_id:
+      client_secret:
+      callback:
     osc:
-      client_id: VVAVHVNBpANuC6PFuZhn
-      client_secret: Hn6nhjEceUijsxmzEWypiQlP2nE9cN5Z
-      callback: https://cp.xuthus.cc
+      client_id:
+      client_secret:
+      callback:
     qq:
-      client_id: VVAVHVNBpANuC6PFuZhn
-      client_secret: Hn6nhjEceUijsxmzEWypiQlP2nE9cN5Z
-      callback: https%3a%2f%2fcp.xuthus.cc%2f%3f
+      client_id:
+      client_secret:
+      callback:
   # jwt 配置项
   jwt:
-    skey: SWtPI3RNJmUjQWFaVXVYUg
+    skey:
     issuer: CoolPush
     subject: cool_push_auth_login
     expires: 86400
   # mysql连接
-  mysql: xuthus:J0710cz5@tcp(rm-2zeu1vk70z826y1n5125010.mysql.rds.aliyuncs.com:3306)/coolpush?charset=utf8mb4&collation=utf8mb4_general_ci&parseTime=True&loc=Local
+  mysql:
   # 发起send的地址 不需要端口
   cqhttp: http://127.0.0.1
   # 机器人列表 QQ:PORT
@@ -42,20 +42,20 @@ environments:
     2292066393: :5710
     2277671372: :5711
   # 微信推送token
-  wxpusher_token: AT_RdjijWgwRmOyetqMN6STacLKXcDWSRxp
+  wxpusher_token:
   # 可用的邮箱列表
   email_list:
-    - host: smtp.sina.cn
-      port: 465
-      username: xuthus5@sina.cn
-      password: 686377ed5ad0f5a6
+    - host:
+      port:
+      username:
+      password:
   wework:
-    agent_id: 1000002
-    corp_id: wwbc847e37e4804b67
-    secret: z2Ea3uj17UNYO19GqexWT-rg6NmwINVv7cswr8oc_lA
-    callback_token: REAqcqMtwMD5wvw8
-    callback_encoding_aes_key: LHSuEJnh8uyMFHpvCiWvXeS6WMAhpas2G4nip1lFkw4
-    callback_url: https://push.xuthus.cc/callback/wework
+    agent_id:
+    corp_id:
+    secret:
+    callback_token:
+    callback_encoding_aes_key:
+    callback_url:
   redis:
     addr: 127.0.0.1:1
     password: 123

@@ -1,2 +1,4 @@
 .idea
 warn.log*
+cert.crt
+key.key

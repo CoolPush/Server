@@ -6,10 +6,11 @@
 
 [实现细节](https://xuthus.cc/dev/qq-message-push.html)
 
+> 代码随手写的 问题有点多
 
 ## 如何使用
 
-```go
+```shell
 # 编译
 go build -o CoolPush .
 # 执行
